@@ -2,7 +2,7 @@
 
 import { useState, FormEvent, useEffect, useRef, useCallback } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { useExcalidrawContext } from "@/lib/excalidraw-context";
 import {
   executeAutoTool,
@@ -12,6 +12,7 @@ import {
   TOOL_NAMES,
   type MermaidToolResult,
 } from "@/lib/client-tools";
+import { AddToolOutputFn } from "@/lib/client-tools/types";
 import { readScene } from "@/lib/client-tools/scene-utils";
 import { jsonToDsl } from "@/lib/dsl/json-mapper";
 import { serializeDSL } from "@/lib/dsl/serializer";
@@ -34,6 +35,7 @@ export default function AIChatSidebar() {
 
   const { messages, sendMessage, addToolOutput, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     
     // Auto-execute client-side tools (except those requiring confirmation)
     async onToolCall({ toolCall }) {
@@ -47,7 +49,7 @@ export default function AIChatSidebar() {
           input: toolCall.input,
           dynamic: toolCall.dynamic,
         },
-        addToolOutput,
+        addToolOutput as unknown as AddToolOutputFn,
         canvasEmpty,
         canvasOps()
       );
@@ -70,7 +72,12 @@ export default function AIChatSidebar() {
   // Handle user confirmation for replace
   const handleConfirmReplace = useCallback(
     async (toolCallId: string, mermaidSyntax: string) => {
-      await confirmReplaceDiagram(toolCallId, mermaidSyntax, addToolOutput, canvasOps());
+      await confirmReplaceDiagram(
+        toolCallId,
+        mermaidSyntax,
+        addToolOutput as unknown as AddToolOutputFn,
+        canvasOps()
+      );
     },
     [addToolOutput, canvasOps]
   );
@@ -78,7 +85,7 @@ export default function AIChatSidebar() {
   // Handle user rejection for replace
   const handleRejectReplace = useCallback(
     (toolCallId: string) => {
-      rejectReplaceDiagram(toolCallId, addToolOutput);
+      rejectReplaceDiagram(toolCallId, addToolOutput as unknown as AddToolOutputFn);
     },
     [addToolOutput]
   );

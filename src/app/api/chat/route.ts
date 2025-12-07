@@ -18,7 +18,12 @@ When you receive errors from tool execution:
 - "Canvas is not empty" error → Automatically call replaceDiagramWithMermaid instead
 - Parse error → Read DIAGNOSTIC section, identify the syntax issue, regenerate with corrected syntax
 
-Tool descriptions contain all syntax requirements. Always check them before generating Mermaid code.`;
+Tool descriptions contain all syntax requirements. Always check them before generating Mermaid code.
+
+MULTI-STEP BEHAVIOR:
+- Plan your edits and call as many tools as needed until the requested change is complete. Do NOT stop after a single tool call if more are needed.
+- After each tool call, immediately continue: either call the next tool or send a brief assistant text with what you did and what you will do next. Never end the reply right after a tool call unless the task is fully done.
+- Only end the reply when the user's request is fully addressed.`;
 
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
