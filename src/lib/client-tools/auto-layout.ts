@@ -181,13 +181,115 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
     return el;
   });
 
-  writeScene(canvasOps, nextElements, files);
+  // Rebuild edges with updated bindings/points
+  const nodeLookup = new Map<string, ExcalidrawElement>();
+  for (const el of nextElements) {
+    if (["rectangle", "diamond", "ellipse"].includes(el.type as string)) {
+      nodeLookup.set(el.id, el);
+    }
+  }
+
+  const finalElements = nextElements.map((el) => {
+    if (el.type !== "arrow" && el.type !== "line") return el;
+    const from = (el as any).startBinding?.elementId as string | undefined;
+    const to = (el as any).endBinding?.elementId as string | undefined;
+    if (!from || !to) return el;
+    const fromEl = nodeLookup.get(from);
+    const toEl = nodeLookup.get(to);
+    if (!fromEl || !toEl) return el;
+
+    const fromCenter: [number, number] = [
+      (fromEl.x as number) + (fromEl.width as number) / 2,
+      (fromEl.y as number) + (fromEl.height as number) / 2,
+    ];
+    const toCenter: [number, number] = [
+      (toEl.x as number) + (toEl.width as number) / 2,
+      (toEl.y as number) + (toEl.height as number) / 2,
+    ];
+
+    const intersectWithRect = (
+      rect: ExcalidrawElement | undefined,
+      target: [number, number]
+    ): { point: [number, number]; focus: number } => {
+      if (!rect) return { point: target, focus: 0.5 };
+      const cx = (rect.x as number) + (rect.width as number) / 2;
+      const cy = (rect.y as number) + (rect.height as number) / 2;
+      const dx = target[0] - cx;
+      const dy = target[1] - cy;
+      const dirX = dx === 0 && dy === 0 ? 1 : dx;
+      const dirY = dx === 0 && dy === 0 ? 0 : dy;
+      const minX = rect.x as number;
+      const maxX = (rect.x as number) + (rect.width as number);
+      const minY = rect.y as number;
+      const maxY = (rect.y as number) + (rect.height as number);
+      const candidates: { t: number; point: [number, number]; edge: "top" | "right" | "bottom" | "left" }[] = [];
+
+      if (dirX !== 0) {
+        const tLeft = (minX - cx) / dirX;
+        const yLeft = cy + tLeft * dirY;
+        if (tLeft > 0 && yLeft >= minY && yLeft <= maxY) candidates.push({ t: tLeft, point: [minX, yLeft], edge: "left" });
+
+        const tRight = (maxX - cx) / dirX;
+        const yRight = cy + tRight * dirY;
+        if (tRight > 0 && yRight >= minY && yRight <= maxY)
+          candidates.push({ t: tRight, point: [maxX, yRight], edge: "right" });
+      }
+
+      if (dirY !== 0) {
+        const tTop = (minY - cy) / dirY;
+        const xTop = cx + tTop * dirX;
+        if (tTop > 0 && xTop >= minX && xTop <= maxX) candidates.push({ t: tTop, point: [xTop, minY], edge: "top" });
+
+        const tBottom = (maxY - cy) / dirY;
+        const xBottom = cx + tBottom * dirX;
+        if (tBottom > 0 && xBottom >= minX && xBottom <= maxX)
+          candidates.push({ t: tBottom, point: [xBottom, maxY], edge: "bottom" });
+      }
+
+      const hit = candidates.sort((a, b) => a.t - b.t)[0];
+      if (!hit) return { point: target, focus: 0.5 };
+
+      const [px, py] = hit.point;
+      const focus =
+        hit.edge === "top"
+          ? ((px - minX) / (rect.width as number)) * 0.25
+          : hit.edge === "right"
+            ? 0.25 + ((py - minY) / (rect.height as number)) * 0.25
+            : hit.edge === "bottom"
+              ? 0.5 + ((maxX - px) / (rect.width as number)) * 0.25
+              : 0.75 + ((maxY - py) / (rect.height as number)) * 0.25;
+
+      return { point: hit.point, focus };
+    };
+
+    const startInfo = intersectWithRect(fromEl, toCenter);
+    const endInfo = intersectWithRect(toEl, fromCenter);
+    const dx = endInfo.point[0] - startInfo.point[0];
+    const dy = endInfo.point[1] - startInfo.point[1];
+    const points: [number, number][] = [
+      [0, 0],
+      [dx, dy],
+    ];
+
+    return {
+      ...el,
+      x: startInfo.point[0],
+      y: startInfo.point[1],
+      width: Math.abs(dx),
+      height: Math.abs(dy),
+      points,
+      startBinding: { elementId: from, focus: startInfo.focus, gap: 4, fixedPoint: null },
+      endBinding: { elementId: to, focus: endInfo.focus, gap: 4, fixedPoint: null },
+    };
+  });
+
+  writeScene(canvasOps, finalElements, files);
 
   const output: SceneToolResult = {
     success: true,
     action: "auto-layout",
     message: `Auto layout applied to ${nodes.length} nodes`,
-    elements: nextElements,
+    elements: finalElements,
     files,
   };
 
