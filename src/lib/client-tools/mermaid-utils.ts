@@ -1,11 +1,25 @@
 /**
  * Mermaid to Excalidraw conversion utilities
+ * Client-side only - uses dynamic imports to avoid SSR issues
  */
 
-import { parseMermaidToExcalidraw } from "@excalidraw/mermaid-to-excalidraw";
-import { convertToExcalidrawElements } from "@excalidraw/excalidraw";
 import type { ExcalidrawElement, MermaidToolResult } from "./types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
+
+/**
+ * Lazy load Excalidraw utilities (client-side only)
+ */
+async function getExcalidrawUtils() {
+  const [
+    { parseMermaidToExcalidraw },
+    { convertToExcalidrawElements }
+  ] = await Promise.all([
+    import("@excalidraw/mermaid-to-excalidraw"),
+    import("@excalidraw/excalidraw")
+  ]);
+  
+  return { parseMermaidToExcalidraw, convertToExcalidrawElements };
+}
 
 /**
  * Detect diagram type from Mermaid syntax
@@ -70,6 +84,9 @@ export async function parseMermaidSyntax(
   action: "create" | "replace"
 ): Promise<MermaidToolResult> {
   try {
+    // Dynamic import to avoid SSR issues
+    const { parseMermaidToExcalidraw, convertToExcalidrawElements } = await getExcalidrawUtils();
+    
     const { elements: skeletonElements, files } = await parseMermaidToExcalidraw(
       mermaidSyntax,
       {}
