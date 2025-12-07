@@ -64,8 +64,9 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
     });
   }
 
-  // build edge list for spring attraction
+  // build edge list for spring attraction and edge repulsion helpers
   const edges: [string, string][] = [];
+  const edgePairs: [NodeInfo, NodeInfo][] = [];
   for (const el of elements) {
     if (el.type === "arrow" || el.type === "line") {
       const from = (el as any).startBinding?.elementId as string | undefined;
@@ -73,6 +74,9 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
       if (!from || !to) continue;
       if (targetIds && (!targetIds.has(from) || !targetIds.has(to))) continue;
       edges.push([from, to]);
+      const a = nodes.find((n) => n.id === from);
+      const b = nodes.find((n) => n.id === to);
+      if (a && b) edgePairs.push([a, b]);
     }
   }
 
@@ -139,6 +143,37 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
       fy.set(a.id, (fy.get(a.id) || 0) - fyVal);
       fx.set(b.id, (fx.get(b.id) || 0) + fxVal);
       fy.set(b.id, (fy.get(b.id) || 0) + fyVal);
+    }
+
+    // edge-edge repulsion (push disconnected edges apart)
+    for (let i = 0; i < edgePairs.length; i++) {
+      for (let j = i + 1; j < edgePairs.length; j++) {
+        const [a1, a2] = edgePairs[i];
+        const [b1, b2] = edgePairs[j];
+        // skip if sharing a node
+        if (a1.id === b1.id || a1.id === b2.id || a2.id === b1.id || a2.id === b2.id) continue;
+
+        const midAx = (a1.x + a2.x) / 2;
+        const midAy = (a1.y + a2.y) / 2;
+        const midBx = (b1.x + b2.x) / 2;
+        const midBy = (b1.y + b2.y) / 2;
+        const dx = midAx - midBx;
+        const dy = midAy - midBy;
+        const dist2 = dx * dx + dy * dy || 0.01;
+        const force = (k * k * 0.2) / dist2;
+        const dist = Math.sqrt(dist2);
+        const fxVal = (force * dx) / dist;
+        const fyVal = (force * dy) / dist;
+
+        for (const n of [a1, a2]) {
+          fx.set(n.id, (fx.get(n.id) || 0) + fxVal);
+          fy.set(n.id, (fy.get(n.id) || 0) + fyVal);
+        }
+        for (const n of [b1, b2]) {
+          fx.set(n.id, (fx.get(n.id) || 0) - fxVal);
+          fy.set(n.id, (fy.get(n.id) || 0) - fyVal);
+        }
+      }
     }
 
     // integrate
