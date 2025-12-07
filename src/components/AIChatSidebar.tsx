@@ -14,7 +14,7 @@ import {
 } from "@/lib/client-tools";
 
 export default function AIChatSidebar() {
-  const { updateScene, clearScene, getExcalidrawAPI } = useExcalidrawContext();
+  const { updateScene, clearScene, getExcalidrawAPI, scene } = useExcalidrawContext();
   const [inputValue, setInputValue] = useState("");
   const processedOutputs = useRef<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -34,6 +34,9 @@ export default function AIChatSidebar() {
     
     // Auto-execute client-side tools (except those requiring confirmation)
     async onToolCall({ toolCall }) {
+      // Check if canvas is empty by examining current scene
+      const canvasEmpty = !scene.elements || scene.elements.length === 0;
+
       await executeAutoTool(
         {
           toolCallId: toolCall.toolCallId,
@@ -41,7 +44,8 @@ export default function AIChatSidebar() {
           input: toolCall.input,
           dynamic: toolCall.dynamic,
         },
-        addToolOutput
+        addToolOutput,
+        canvasEmpty
       );
     },
   });

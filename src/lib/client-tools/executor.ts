@@ -25,10 +25,15 @@ export const TOOL_NAMES = {
 /**
  * Execute a tool call automatically (for onToolCall callback)
  * Only executes tools that don't require user confirmation
+ * 
+ * @param toolCall - Tool call information
+ * @param addToolOutput - Function to return tool output
+ * @param canvasEmpty - Whether the Excalidraw canvas is currently empty
  */
 export async function executeAutoTool(
   toolCall: ToolCallInfo,
-  addToolOutput: AddToolOutputFn
+  addToolOutput: AddToolOutputFn,
+  canvasEmpty: boolean = true
 ): Promise<boolean> {
   // Skip dynamic tools
   if (toolCall.dynamic) {
@@ -36,9 +41,9 @@ export async function executeAutoTool(
   }
 
   try {
-    // createDiagramFromMermaid - auto execute
+    // createDiagramFromMermaid - auto execute only if canvas is empty
     if (createDiagram.matches(toolCall.toolName)) {
-      await createDiagram.execute(toolCall, addToolOutput);
+      await createDiagram.execute(toolCall, addToolOutput, canvasEmpty);
       return true;
     }
     
