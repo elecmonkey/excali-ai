@@ -39,8 +39,7 @@ export async function execute(
   const { elements, files } = readScene(canvasOps);
   console.debug("[insertEdge] before insert", { count: elements.length });
   // auto-generate unique id
-  const baseId = "edge";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const baseId = "edge";  
   const genId = () => ((globalThis as any).crypto?.randomUUID?.() as string) || `${baseId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let edgeId = genId();
   while (elements.some((el) => el.id === edgeId)) {
@@ -126,26 +125,19 @@ export async function execute(
       x: startInfo.point[0],
       y: startInfo.point[1],
     }),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     points: points as any,
   };
   // Make edges visually consistent with native defaults (thicker stroke)
   (el as any).strokeWidth = 2;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (el as any).startBinding = { elementId: parsed.data.from, focus: startInfo.focus, gap: 4, fixedPoint: null };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (el as any).endBinding = { elementId: parsed.data.to, focus: endInfo.focus, gap: 4, fixedPoint: null };
 
   const startArrow = parsed.data.startArrow ?? parsed.data.startArrowhead;
   const endArrow = parsed.data.endArrow ?? parsed.data.endArrowhead;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (startArrow !== undefined) (el as any).startArrowhead = startArrow ? "arrow" : null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (endArrow !== undefined) (el as any).endArrowhead = endArrow ? "arrow" : null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (parsed.data.type === "elbow-arrow") (el as any).elbowed = true;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (parsed.data.label) (el as any).label = parsed.data.label;
 
   const updatedElements = elements.map((candidate) => {

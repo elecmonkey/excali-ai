@@ -131,7 +131,6 @@ export function applyMermaidResultToCanvas(
   result: MermaidToolResult,
   clearScene: () => void,
   updateScene: (elements: ExcalidrawElement[], files?: BinaryFiles) => void,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getExcalidrawAPI: () => any
 ): void {
   if (!result.success || !result.elements) {

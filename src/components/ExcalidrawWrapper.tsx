@@ -9,7 +9,6 @@ export default function ExcalidrawWrapper() {
   const { registerExcalidrawAPI } = useExcalidrawContext();
   
   // Use any to bypass Excalidraw's complex type system
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleExcalidrawMount = useCallback((api: any) => {
     registerExcalidrawAPI(api);
   }, [registerExcalidrawAPI]);

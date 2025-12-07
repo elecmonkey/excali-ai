@@ -34,7 +34,6 @@ const schema = z
   .strip();
 
 function generateId(base?: string): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const uuid = (globalThis as any).crypto?.randomUUID?.();
   if (uuid) return uuid;
   const suffix = Math.random().toString(36).slice(2, 8);

@@ -5,7 +5,6 @@
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 
 // Excalidraw element type (simplified, actual type is complex)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ExcalidrawElement = Record<string, any>;
 
 /**
@@ -44,7 +43,6 @@ export interface SceneToolResult extends ToolResultBase {
 export interface ToolCallInfo {
   toolCallId: string;
   toolName: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input: any;
   dynamic?: boolean;
 }
@@ -79,7 +77,6 @@ export interface ToolExecutionContext {
   // Excalidraw operations
   updateScene: (elements: ExcalidrawElement[], files?: BinaryFiles) => void;
   clearScene: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getExcalidrawAPI: () => any;
 }
 

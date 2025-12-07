@@ -127,8 +127,7 @@ export default function AIChatSidebar() {
 
   // Check if we're actually waiting for something
   const hasWaitingReplaceConfirmation = messages.some(msg => 
-    msg.role === "assistant" && 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    msg.role === "assistant" &&
     msg.parts.some((p: any) => 
       p.type === `tool-${TOOL_NAMES.REPLACE_DIAGRAM}` && 
       p.state === "input-available"
@@ -165,7 +164,6 @@ export default function AIChatSidebar() {
       if (msg.role !== "assistant") return;
 
       msg.parts.forEach((part) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const p = part as any;
         const isCreateTool = p.type === `tool-${TOOL_NAMES.CREATE_DIAGRAM}`;
         const isReplaceTool = p.type === `tool-${TOOL_NAMES.REPLACE_DIAGRAM}`;
@@ -199,7 +197,6 @@ export default function AIChatSidebar() {
     setInputValue("");
     // Attach current scene DSL as inline context to help the model reference ids
     const { elements, files } = readScene(canvasOps());
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dsl = serializeDSL(jsonToDsl({ elements: elements as any, files, appState: {} }));
     const withContext = `${message}\n\n[CURRENT_DIAGRAM_DSL]\n${dsl}`;
     await sendMessage({ text: withContext });
@@ -273,7 +270,6 @@ export default function AIChatSidebar() {
   );
 
   // Render tool part based on type and state
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderToolPart = (p: any, idx: number) => {
     // Create diagram tool
     if (p.type === `tool-${TOOL_NAMES.CREATE_DIAGRAM}`) {
@@ -433,7 +429,6 @@ export default function AIChatSidebar() {
               }`}
             >
               {msg.parts.map((part, idx) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const p = part as any;
 
                 if (p.type === "text") {

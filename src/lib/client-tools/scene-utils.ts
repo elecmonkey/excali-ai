@@ -4,7 +4,6 @@ import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 export interface CanvasOps {
   clearScene: () => void;
   updateScene: (elements: ExcalidrawElement[], files?: BinaryFiles) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getExcalidrawAPI: () => any;
 }
 

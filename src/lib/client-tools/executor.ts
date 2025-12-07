@@ -135,7 +135,6 @@ export async function confirmReplaceDiagram(
   canvasOps: {
     clearScene: () => void;
     updateScene: (elements: ExcalidrawElement[], files?: BinaryFiles) => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getExcalidrawAPI: () => any;
   }
 ): Promise<void> {
@@ -174,7 +173,6 @@ export function applyToolResultToCanvas(
   canvasOps: {
     clearScene: () => void;
     updateScene: (elements: ExcalidrawElement[], files?: BinaryFiles) => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getExcalidrawAPI: () => any;
   }
 ): void {
@@ -182,7 +180,6 @@ export function applyToolResultToCanvas(
 
   try {
     console.debug("[applyToolResultToCanvas] applying", {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       action: (result as any).action,
       count: result.elements?.length,
     });
