@@ -88,6 +88,9 @@ export default function AIChatSidebar() {
   const processedOutputs = useRef<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastOverlapHash = useRef<string>("");
+  const messageSnapshots = useRef<Map<string, { elements: any[]; files: any }>>(new Map());
+  const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
+  const [confirmPos, setConfirmPos] = useState<{ top: number; left: number } | null>(null);
 
   // Canvas operations for tool execution
   const canvasOps = useCallback(
@@ -249,6 +252,25 @@ export default function AIChatSidebar() {
         `${lines.join("\n")}`,
     });
   }, [messages, scene.elements, status, sendMessage]);
+
+  // Capture scene snapshot for new user messages (approximate send-time)
+  useEffect(() => {
+    messages.forEach((msg) => {
+      if (msg.role !== "user") return;
+      if (messageSnapshots.current.has(msg.id)) return;
+      const { elements, files } = readScene(canvasOps());
+      messageSnapshots.current.set(msg.id, { elements: elements as any[], files });
+    });
+  }, [messages, canvasOps]);
+
+  const handleRestoreSnapshot = useCallback(
+    (msgId: string) => {
+      const snap = messageSnapshots.current.get(msgId);
+      if (!snap) return;
+      updateScene(snap.elements, snap.files);
+    },
+    [updateScene]
+  );
 
   // Render tool part based on type and state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -451,7 +473,57 @@ export default function AIChatSidebar() {
             >
               {msg.role === "user" ? (
                 <div className="flex items-start gap-2">
-                  {dslSnippet && !isOverlapFeedback ? <DslBadge dsl={dslSnippet} /> : null}
+                  {dslSnippet && !isOverlapFeedback ? (
+                    <div className="flex flex-col items-center gap-1 relative">
+                      <DslBadge dsl={dslSnippet} />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setConfirmPos({ top: rect.top, left: rect.left });
+                          setConfirmTarget(msg.id);
+                        }}
+                        disabled={isLoading}
+                        className="h-5 w-5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-red-500 dark:text-red-300 text-[10px] flex items-center justify-center border border-zinc-200 dark:border-zinc-700 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Restore to this message snapshot"
+                      >
+                        ↺
+                      </button>
+                      {confirmTarget === msg.id && confirmPos &&
+                        createPortal(
+                          <div
+                            className="fixed z-[9999] bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg p-2 text-xs space-y-2"
+                            style={{
+                              top: confirmPos.top,
+                              left: confirmPos.left,
+                              transform: "translate(-110%, 0)",
+                            }}
+                          >
+                            <div>Restore canvas to this snapshot? Current edits will be overwritten.</div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleRestoreSnapshot(msg.id);
+                                  setConfirmTarget(null);
+                                }}
+                                className="px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600 text-xs"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmTarget(null)}
+                                className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 text-xs"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>,
+                          document.body
+                        )}
+                    </div>
+                  ) : null}
                   {bubble}
                 </div>
               ) : (
