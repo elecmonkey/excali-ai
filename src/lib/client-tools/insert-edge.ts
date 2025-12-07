@@ -30,7 +30,8 @@ export async function execute(
     addToolOutput({
       tool: TOOL_NAME,
       toolCallId: toolCall.toolCallId,
-      output: { success: false, action: "insert-edge", error: parsed.error.message },
+      state: "output-error",
+      errorText: parsed.error.message,
     });
     return;
   }
@@ -103,6 +104,7 @@ export async function execute(
   addToolOutput({
     tool: TOOL_NAME,
     toolCallId: toolCall.toolCallId,
+    state: "output-available",
     output,
   });
   console.debug("[insertEdge] output sent", { success: output.success, count: output.elements?.length });

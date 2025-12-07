@@ -30,6 +30,7 @@ export async function executeWithConfirmation(
   addToolOutput({
     tool: TOOL_NAME,
     toolCallId,
+    state: "output-available",
     output,
   });
   
@@ -55,6 +56,7 @@ export function executeRejection(
   addToolOutput({
     tool: TOOL_NAME,
     toolCallId,
+    state: "output-available",
     output,
   });
 }

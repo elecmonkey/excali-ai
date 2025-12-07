@@ -29,7 +29,8 @@ export async function execute(
     addToolOutput({
       tool: TOOL_NAME,
       toolCallId: toolCall.toolCallId,
-      output: { success: false, action: "batch-update-nodes", error: parsed.error.message },
+      state: "output-error",
+      errorText: parsed.error.message,
     });
     return;
   }
@@ -59,6 +60,7 @@ export async function execute(
   addToolOutput({
     tool: TOOL_NAME,
     toolCallId: toolCall.toolCallId,
+    state: "output-available",
     output,
   });
 }

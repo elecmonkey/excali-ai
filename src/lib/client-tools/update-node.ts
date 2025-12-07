@@ -27,7 +27,8 @@ export async function execute(
     addToolOutput({
       tool: TOOL_NAME,
       toolCallId: toolCall.toolCallId,
-      output: { success: false, action: "update-node", error: parsed.error.message },
+      state: "output-error",
+      errorText: parsed.error.message,
     });
     return;
   }
@@ -38,7 +39,8 @@ export async function execute(
     addToolOutput({
       tool: TOOL_NAME,
       toolCallId: toolCall.toolCallId,
-      output: { success: false, action: "update-node", error: `Node ${parsed.data.id} not found` },
+      state: "output-error",
+      errorText: `Node ${parsed.data.id} not found`,
     });
     return;
   }
@@ -69,6 +71,7 @@ export async function execute(
   addToolOutput({
     tool: TOOL_NAME,
     toolCallId: toolCall.toolCallId,
+    state: "output-available",
     output,
   });
 }

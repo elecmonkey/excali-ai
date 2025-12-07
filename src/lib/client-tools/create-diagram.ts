@@ -29,12 +29,8 @@ export async function execute(
     addToolOutput({
       tool: TOOL_NAME,
       toolCallId: toolCall.toolCallId,
-      output: {
-        success: false,
-        action: "create",
-        error: "No mermaid syntax provided",
-        message: "The mermaid parameter is required. Please provide valid Mermaid syntax.",
-      },
+      state: "output-error",
+      errorText: "No mermaid syntax provided",
     });
     return;
   }
@@ -44,12 +40,8 @@ export async function execute(
     addToolOutput({
       tool: TOOL_NAME,
       toolCallId: toolCall.toolCallId,
-      output: {
-        success: false,
-        action: "create",
-        error: "Canvas is not empty",
-        message: "The canvas already contains a diagram. Please use the 'replaceDiagramWithMermaid' tool instead, or clear the canvas first and try again.",
-      },
+      state: "output-error",
+      errorText: "Canvas is not empty",
     });
     return;
   }
@@ -61,6 +53,7 @@ export async function execute(
   addToolOutput({
     tool: TOOL_NAME,
     toolCallId: toolCall.toolCallId,
+    state: "output-available",
     output: result,
   });
 }
