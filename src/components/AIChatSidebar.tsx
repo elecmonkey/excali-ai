@@ -321,7 +321,7 @@ export default function AIChatSidebar() {
             </div>
           );
         case "input-available": {
-          const mermaidSyntax = p.input?.mermaid;
+          const mermaidSyntax = p.input?.mermaid ?? p.input?.mermaidCode;
           if (!mermaidSyntax) {
             return (
               <div key={idx} className="text-xs text-red-600 dark:text-red-400 my-2">

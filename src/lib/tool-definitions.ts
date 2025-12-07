@@ -17,9 +17,15 @@ export const clientTools = {
 ${MERMAID_SYNTAX_GUIDE}
 
 Generate syntactically correct Mermaid code following the rules above. Verify diagram type and syntax before calling this tool.`,
-    inputSchema: z.object({
-      mermaid: z.string().describe("Valid Mermaid diagram syntax - must follow diagram-specific rules above"),
-    }),
+    inputSchema: z.union([
+      z.object({
+        mermaid: z.string().describe("Valid Mermaid diagram syntax - must follow diagram-specific rules above"),
+      }),
+      z.object({
+        mermaidCode: z.string().describe("Alias of mermaid; valid Mermaid syntax"),
+        mermaid: z.string().optional(),
+      }),
+    ]),
   },
   
   replaceDiagramWithMermaid: {
@@ -28,9 +34,15 @@ Generate syntactically correct Mermaid code following the rules above. Verify di
 ${MERMAID_SYNTAX_GUIDE}
 
 Generate syntactically correct Mermaid code following the rules above. User will see a confirmation dialog before replacement.`,
-    inputSchema: z.object({
-      mermaid: z.string().describe("Valid Mermaid diagram syntax - must follow diagram-specific rules above"),
-    }),
+    inputSchema: z.union([
+      z.object({
+        mermaid: z.string().describe("Valid Mermaid diagram syntax - must follow diagram-specific rules above"),
+      }),
+      z.object({
+        mermaidCode: z.string().describe("Alias of mermaid; valid Mermaid syntax"),
+        mermaid: z.string().optional(),
+      }),
+    ]),
   },
   insertNode: {
     description: "Insert a node into the current diagram. Supports relative placement around an existing node. Id will be auto-generated; do NOT provide id.",

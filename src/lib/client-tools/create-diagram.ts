@@ -23,7 +23,7 @@ export async function execute(
   addToolOutput: AddToolOutputFn,
   canvasEmpty: boolean
 ): Promise<void> {
-  const mermaidSyntax = toolCall.input?.mermaid;
+  const mermaidSyntax = toolCall.input?.mermaid ?? toolCall.input?.mermaidCode;
   
   if (!mermaidSyntax) {
     addToolOutput({
