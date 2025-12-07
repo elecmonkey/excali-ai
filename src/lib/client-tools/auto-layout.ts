@@ -98,7 +98,11 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
   const centerY = nodes.reduce((s, n) => s + n.y, 0) / nodes.length;
 
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-  const restLength = (n: NodeInfo, m: NodeInfo) => Math.max((n.w + m.w) / 2 + 40, k);
+  const minSide = (n: NodeInfo) => Math.min(n.w, n.h);
+  const restLength = (n: NodeInfo, m: NodeInfo) => {
+    const minSep = Math.max(minSide(n), minSide(m));
+    return Math.max((n.w + m.w) / 2 + 40, k, minSep);
+  };
 
   for (let step = 0; step < iter; step++) {
     // reset forces
@@ -111,21 +115,24 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
 
     // repulsion
     for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i];
-        const b = nodes[j];
-        const dx = a.x - b.x;
-        const dy = a.y - b.y;
-        const dist2 = dx * dx + dy * dy || 0.01;
-        const force = (k * k) / dist2;
-        const dist = Math.sqrt(dist2);
-        const fxVal = (force * dx) / dist;
-        const fyVal = (force * dy) / dist;
-        fx.set(a.id, (fx.get(a.id) || 0) + fxVal);
-        fy.set(a.id, (fy.get(a.id) || 0) + fyVal);
-        fx.set(b.id, (fx.get(b.id) || 0) - fxVal);
-        fy.set(b.id, (fy.get(b.id) || 0) - fyVal);
-      }
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i];
+      const b = nodes[j];
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dist2 = dx * dx + dy * dy || 0.01;
+      const dist = Math.sqrt(dist2);
+      const minSep = Math.max(minSide(a), minSide(b));
+      const baseForce = (k * k) / dist2;
+      // Stronger push when closer than minSep
+      const force = dist < minSep ? baseForce * (minSep / dist) : baseForce;
+      const fxVal = (force * dx) / dist;
+      const fyVal = (force * dy) / dist;
+      fx.set(a.id, (fx.get(a.id) || 0) + fxVal);
+      fy.set(a.id, (fy.get(a.id) || 0) + fyVal);
+      fx.set(b.id, (fx.get(b.id) || 0) - fxVal);
+      fy.set(b.id, (fy.get(b.id) || 0) - fyVal);
+    }
     }
 
     // attraction along edges
