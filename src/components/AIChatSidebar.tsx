@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { useExcalidrawContext } from "@/lib/excalidraw-context";
@@ -21,6 +22,8 @@ import { detectOverlaps } from "@/lib/geometry/overlap";
 function DslBadge({ dsl }: { dsl: string }) {
   const [visible, setVisible] = useState(false);
   const hideTimer = useRef<number | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -35,6 +38,10 @@ function DslBadge({ dsl }: { dsl: string }) {
       window.clearTimeout(hideTimer.current);
       hideTimer.current = null;
     }
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setPos({ top: rect.top, left: rect.left });
+    }
     setVisible(true);
   };
 
@@ -48,19 +55,29 @@ function DslBadge({ dsl }: { dsl: string }) {
         aria-label="Show DSL snapshot"
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
+        ref={btnRef}
         className="h-4 w-4 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[9px] flex items-center justify-center border border-zinc-200 dark:border-zinc-700 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 dark:hover:text-blue-200"
       >
         D
       </button>
-      <div
-        onMouseEnter={onEnter}
-        onMouseLeave={onLeave}
-        className={`absolute right-full top-0 mr-2 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg max-h-64 w-72 overflow-auto p-3 text-xs whitespace-pre-wrap z-10 transition-opacity duration-200 ${
-          visible ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        {dsl}
-      </div>
+      {pos &&
+        createPortal(
+          <div
+            onMouseEnter={onEnter}
+            onMouseLeave={onLeave}
+            className={`fixed bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg max-h-64 w-72 overflow-auto p-3 text-xs whitespace-pre-wrap z-[9999] transition-opacity duration-200 ${
+              visible ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+            style={{
+              top: pos.top,
+              left: pos.left,
+              transform: "translate(-100%, 0)",
+            }}
+          >
+            {dsl}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -384,7 +401,7 @@ export default function AIChatSidebar() {
           const isOverlapFeedback = firstText?.startsWith("[OVERLAP_FEEDBACK]");
           const bubble = (
             <div
-              className={`max-w-[85%] rounded-lg ${
+              className={`max-w-[95%] w-fit rounded-lg ${
                 isOverlapFeedback
                   ? "bg-transparent shadow-none p-0 text-zinc-900 dark:text-zinc-100"
                   : "px-4 py-2 " +
@@ -414,7 +431,7 @@ export default function AIChatSidebar() {
                     );
                   }
                   return (
-                    <p key={idx} className="text-sm whitespace-pre-wrap">
+                    <p key={idx} className="text-sm whitespace-pre-wrap break-words">
                       {displayText(text)}
                     </p>
                   );
