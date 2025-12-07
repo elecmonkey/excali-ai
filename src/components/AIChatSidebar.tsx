@@ -2,7 +2,7 @@
 
 import { useState, FormEvent, useEffect, useRef, useCallback } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import { DefaultChatTransport } from "ai";
 import { useExcalidrawContext } from "@/lib/excalidraw-context";
 import {
   executeAutoTool,
@@ -12,46 +12,6 @@ import {
   TOOL_NAMES,
   type MermaidToolResult,
 } from "@/lib/client-tools";
-
-/**
- * Determine if we should auto-submit after tool calls complete
- * Don't auto-submit if replaceDiagramWithMermaid is waiting for user confirmation
- */
-function shouldAutoSubmit({ messages }: { messages: UIMessage[] }): boolean {
-  const lastMessage = messages[messages.length - 1];
-  if (!lastMessage || lastMessage.role !== "assistant") return false;
-
-  let hasToolCalls = false;
-  let allToolCallsComplete = true;
-  let hasWaitingReplace = false;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lastMessage.parts.forEach((part: any) => {
-    if (part.type?.startsWith("tool-")) {
-      hasToolCalls = true;
-
-      // replaceDiagramWithMermaid in input-available state needs user interaction
-      if (
-        part.type === `tool-${TOOL_NAMES.REPLACE_DIAGRAM}` &&
-        part.state === "input-available"
-      ) {
-        hasWaitingReplace = true;
-        allToolCallsComplete = false;
-      }
-
-      // Other tools need output to be complete
-      if (
-        part.state !== "output-available" &&
-        part.state !== "output-error" &&
-        part.type !== `tool-${TOOL_NAMES.REPLACE_DIAGRAM}`
-      ) {
-        allToolCallsComplete = false;
-      }
-    }
-  });
-
-  return hasToolCalls && allToolCallsComplete && !hasWaitingReplace;
-}
 
 export default function AIChatSidebar() {
   const { updateScene, clearScene, getExcalidrawAPI } = useExcalidrawContext();
@@ -71,8 +31,7 @@ export default function AIChatSidebar() {
 
   const { messages, sendMessage, addToolOutput, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
-    sendAutomaticallyWhen: shouldAutoSubmit,
-
+    
     // Auto-execute client-side tools (except those requiring confirmation)
     async onToolCall({ toolCall }) {
       await executeAutoTool(
@@ -87,7 +46,18 @@ export default function AIChatSidebar() {
     },
   });
 
-  const isLoading = status === "streaming" || status === "submitted";
+  // Check if we're actually waiting for something
+  const hasWaitingReplaceConfirmation = messages.some(msg => 
+    msg.role === "assistant" && 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    msg.parts.some((p: any) => 
+      p.type === `tool-${TOOL_NAMES.REPLACE_DIAGRAM}` && 
+      p.state === "input-available"
+    )
+  );
+
+  // Don't show loading if we're waiting for user confirmation
+  const isLoading = (status === "streaming" || status === "submitted") && !hasWaitingReplaceConfirmation;
 
   // Handle user confirmation for replace
   const handleConfirmReplace = useCallback(
