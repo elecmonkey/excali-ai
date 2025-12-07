@@ -110,34 +110,33 @@ export async function execute(
 
   const additions: ExcalidrawElement[] = [el];
   if (parsed.data.label && parsed.data.type !== "text") {
-    const fontSize = 20;
-    const textHeight = fontSize * 1.25;
-    const padding = 20;
-    const textWidth = Math.max(40, Math.min(el.width - padding, parsed.data.label.length * fontSize * 0.6));
-    const textX = el.x + (el.width - textWidth) / 2;
-    const textY = el.y + (el.height - textHeight) / 2;
+    // Dynamically import Excalidraw helpers to compute correct text bounds
+    const [{ redrawTextBoundingBox }, { newElementWith }]: any = await Promise.all([
+      import("@excalidraw/excalidraw"),
+      import("@excalidraw/excalidraw"),
+    ]);
 
-    // Create a bound text label, centered within the container
+    // Create a provisional text element bound to the container
     const textEl = createDefaultElement({
       id: generateId("text"),
       type: "text",
-      x: textX,
-      y: textY,
-      width: textWidth,
-      height: textHeight,
+      x: el.x,
+      y: el.y,
+      width: el.width,
+      height: el.height,
       label: parsed.data.label,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as any;
     textEl.containerId = elementId;
     textEl.textAlign = "center";
     textEl.verticalAlign = "middle";
     textEl.originalText = parsed.data.label;
     textEl.autoResize = true;
-    textEl.fontSize = fontSize;
-    textEl.baseline = fontSize * 0.9;
+
+    // Use Excalidraw's redraw to center text within container
+    redrawTextBoundingBox(textEl, el as any, { elements: [] } as any);
+
     additions.push(textEl);
 
-    // link back to container for layout
     const bound = (el as any).boundElements ?? [];
     bound.push({ type: "text", id: textEl.id });
     (el as any).boundElements = bound;
