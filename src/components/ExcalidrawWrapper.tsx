@@ -2,11 +2,22 @@
 
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
+import { useExcalidrawContext } from "@/lib/excalidraw-context";
+import { useCallback } from "react";
 
 export default function ExcalidrawWrapper() {
+  const { registerExcalidrawAPI } = useExcalidrawContext();
+  
+  // Use any to bypass Excalidraw's complex type system
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleExcalidrawMount = useCallback((api: any) => {
+    registerExcalidrawAPI(api);
+  }, [registerExcalidrawAPI]);
+
   return (
     <div className="h-full w-full">
       <Excalidraw
+        excalidrawAPI={handleExcalidrawMount}
         theme="light"
         UIOptions={{
           canvasActions: {

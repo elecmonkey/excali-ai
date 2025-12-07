@@ -2,6 +2,7 @@
 
 import { XProvider } from "@ant-design/x";
 import { ConfigProvider } from "antd";
+import { ExcalidrawProvider } from "@/lib/excalidraw-context";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +14,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      <XProvider>{children}</XProvider>
+      <XProvider>
+        <ExcalidrawProvider>{children}</ExcalidrawProvider>
+      </XProvider>
     </ConfigProvider>
   );
 }
