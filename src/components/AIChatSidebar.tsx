@@ -1,23 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useChat } from "@ai-sdk/react";
 
 export default function AIChatSidebar() {
-  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
-    { role: "assistant", content: "Hello! I'm your AI assistant. How can I help you with your diagram today?" }
-  ]);
+  const { messages, sendMessage } = useChat();
   const [input, setInput] = useState("");
 
   const handleSend = () => {
     if (!input.trim()) return;
     
-    setMessages([...messages, { role: "user", content: input }]);
+    sendMessage({ text: input });
     setInput("");
-    
-    // Placeholder response
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: "assistant", content: "This is a placeholder response. AI integration coming soon!" }]);
-    }, 500);
   };
 
   return (
@@ -30,9 +24,9 @@ export default function AIChatSidebar() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, idx) => (
+        {messages.map((msg) => (
           <div
-            key={idx}
+            key={msg.id}
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
@@ -42,7 +36,16 @@ export default function AIChatSidebar() {
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              {msg.parts.map((part, idx) => {
+                if (part.type === "text") {
+                  return (
+                    <p key={idx} className="text-sm whitespace-pre-wrap">
+                      {part.text}
+                    </p>
+                  );
+                }
+                return null;
+              })}
             </div>
           </div>
         ))}
