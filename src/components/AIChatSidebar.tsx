@@ -12,6 +12,9 @@ import {
   TOOL_NAMES,
   type MermaidToolResult,
 } from "@/lib/client-tools";
+import { readScene } from "@/lib/client-tools/scene-utils";
+import { jsonToDsl } from "@/lib/dsl/json-mapper";
+import { serializeDSL } from "@/lib/dsl/serializer";
 
 export default function AIChatSidebar() {
   const { updateScene, clearScene, getExcalidrawAPI, scene } = useExcalidrawContext();
@@ -118,7 +121,18 @@ export default function AIChatSidebar() {
 
     const message = inputValue;
     setInputValue("");
-    await sendMessage({ text: message });
+    // Attach current scene DSL as inline context to help the model reference ids
+    const { elements, files } = readScene(canvasOps());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dsl = serializeDSL(jsonToDsl({ elements: elements as any, files, appState: {} }));
+    const withContext = `${message}\n\n[CURRENT_DIAGRAM_DSL]\n${dsl}`;
+    await sendMessage({ text: withContext });
+  };
+
+  const displayText = (text: string) => {
+    const marker = "\n\n[CURRENT_DIAGRAM_DSL]";
+    const idx = text.indexOf(marker);
+    return idx === -1 ? text : text.slice(0, idx);
   };
 
   // Render tool part based on type and state
@@ -276,7 +290,7 @@ export default function AIChatSidebar() {
                 if (p.type === "text") {
                   return (
                     <p key={idx} className="text-sm whitespace-pre-wrap">
-                      {p.text}
+                      {displayText(p.text)}
                     </p>
                   );
                 }
