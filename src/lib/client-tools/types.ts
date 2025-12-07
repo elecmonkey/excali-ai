@@ -30,6 +30,14 @@ export interface MermaidToolResult extends ToolResultBase {
 }
 
 /**
+ * Result for generic scene tools (node/edge operations)
+ */
+export interface SceneToolResult extends ToolResultBase {
+  elements?: ExcalidrawElement[];
+  files?: BinaryFiles;
+}
+
+/**
  * Tool call information from AI SDK
  */
 export interface ToolCallInfo {

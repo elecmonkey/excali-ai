@@ -45,7 +45,8 @@ export default function AIChatSidebar() {
           dynamic: toolCall.dynamic,
         },
         addToolOutput,
-        canvasEmpty
+        canvasEmpty,
+        canvasOps()
       );
     },
   });
@@ -90,7 +91,9 @@ export default function AIChatSidebar() {
         const isCreateTool = p.type === `tool-${TOOL_NAMES.CREATE_DIAGRAM}`;
         const isReplaceTool = p.type === `tool-${TOOL_NAMES.REPLACE_DIAGRAM}`;
 
-        if ((isCreateTool || isReplaceTool) && p.state === "output-available") {
+        const hasElements = p.output?.elements;
+
+        if ((isCreateTool || isReplaceTool || hasElements) && p.state === "output-available") {
           const outputId = `${p.toolCallId}-output`;
           if (processedOutputs.current.has(outputId)) return;
           processedOutputs.current.add(outputId);

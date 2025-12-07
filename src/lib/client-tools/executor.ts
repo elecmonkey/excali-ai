@@ -7,6 +7,13 @@
 
 import * as createDiagram from "./create-diagram";
 import * as replaceDiagram from "./replace-diagram";
+import * as insertNode from "./insert-node";
+import * as updateNode from "./update-node";
+import * as deleteNode from "./delete-node";
+import * as batchUpdateNodes from "./batch-update-nodes";
+import * as insertEdge from "./insert-edge";
+import * as updateEdge from "./update-edge";
+import * as deleteEdge from "./delete-edge";
 import { applyMermaidResultToCanvas } from "./mermaid-utils";
 import type { 
   ToolCallInfo, 
@@ -15,11 +22,19 @@ import type {
   ExcalidrawElement,
 } from "./types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
+import type { CanvasOps } from "./scene-utils";
 
 // Re-export tool names for external use
 export const TOOL_NAMES = {
   CREATE_DIAGRAM: createDiagram.TOOL_NAME,
   REPLACE_DIAGRAM: replaceDiagram.TOOL_NAME,
+  INSERT_NODE: insertNode.TOOL_NAME,
+  UPDATE_NODE: updateNode.TOOL_NAME,
+  DELETE_NODE: deleteNode.TOOL_NAME,
+  BATCH_UPDATE_NODES: batchUpdateNodes.TOOL_NAME,
+  INSERT_EDGE: insertEdge.TOOL_NAME,
+  UPDATE_EDGE: updateEdge.TOOL_NAME,
+  DELETE_EDGE: deleteEdge.TOOL_NAME,
 } as const;
 
 /**
@@ -33,7 +48,8 @@ export const TOOL_NAMES = {
 export async function executeAutoTool(
   toolCall: ToolCallInfo,
   addToolOutput: AddToolOutputFn,
-  canvasEmpty: boolean = true
+  canvasEmpty: boolean = true,
+  canvasOps?: CanvasOps
 ): Promise<boolean> {
   // Skip dynamic tools
   if (toolCall.dynamic) {
@@ -51,6 +67,41 @@ export async function executeAutoTool(
     if (replaceDiagram.matches(toolCall.toolName)) {
       // Do nothing here, will be handled by UI
       return false;
+    }
+
+    if (insertNode.matches(toolCall.toolName)) {
+      await insertNode.execute(toolCall, addToolOutput, canvasOps);
+      return true;
+    }
+
+    if (updateNode.matches(toolCall.toolName)) {
+      await updateNode.execute(toolCall, addToolOutput, canvasOps);
+      return true;
+    }
+
+    if (deleteNode.matches(toolCall.toolName)) {
+      await deleteNode.execute(toolCall, addToolOutput, canvasOps);
+      return true;
+    }
+
+    if (batchUpdateNodes.matches(toolCall.toolName)) {
+      await batchUpdateNodes.execute(toolCall, addToolOutput, canvasOps);
+      return true;
+    }
+
+    if (insertEdge.matches(toolCall.toolName)) {
+      await insertEdge.execute(toolCall, addToolOutput, canvasOps);
+      return true;
+    }
+
+    if (updateEdge.matches(toolCall.toolName)) {
+      await updateEdge.execute(toolCall, addToolOutput, canvasOps);
+      return true;
+    }
+
+    if (deleteEdge.matches(toolCall.toolName)) {
+      await deleteEdge.execute(toolCall, addToolOutput, canvasOps);
+      return true;
     }
     
     return false;
