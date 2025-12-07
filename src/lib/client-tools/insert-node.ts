@@ -114,9 +114,6 @@ export async function execute(
 
   const additions: ExcalidrawElement[] = [el];
   if (parsed.data.label && parsed.data.type !== "text") {
-    const { redrawTextBoundingBox }: any = await import("@excalidraw/excalidraw");
-
-    // Create a provisional text element bound to the container
     const textEl = createDefaultElement({
       id: generateId("text"),
       type: "text",
@@ -136,8 +133,35 @@ export async function execute(
     textEl.strokeWidth = 2;
     textEl.fillStyle = "solid";
 
-    // Use Excalidraw's redraw to center text within container
-    redrawTextBoundingBox(textEl, el as any, { elements: [el, textEl] } as any);
+    let redrawTextBoundingBox: undefined | ((...args: any[]) => void);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const excalidraw = (await import("@excalidraw/excalidraw")) as unknown as {
+        redrawTextBoundingBox?: (...args: any[]) => void;
+      };
+      redrawTextBoundingBox = excalidraw.redrawTextBoundingBox;
+    } catch (err) {
+      console.warn("[insertNode] failed to load redrawTextBoundingBox; falling back to manual centering", err);
+    }
+
+    if (redrawTextBoundingBox) {
+      const map = new Map<string, ExcalidrawElement>();
+      for (const existing of elements) {
+        map.set(existing.id, existing);
+      }
+      map.set(el.id, el);
+      map.set(textEl.id, textEl as unknown as ExcalidrawElement);
+      // Let Excalidraw compute exact text box and positioning within the container
+      redrawTextBoundingBox(textEl as any, el as any, map as any, false);
+    } else {
+      // Manual centering within container with padding
+      const padding = 10;
+      textEl.width = Math.max(40, el.width - padding * 2);
+      textEl.height = 25;
+      textEl.x = el.x + (el.width - textEl.width) / 2;
+      textEl.y = el.y + (el.height - textEl.height) / 2;
+      textEl.baseline = textEl.height * 0.9;
+    }
 
     additions.push(textEl);
 
