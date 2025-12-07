@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AddToolOutputFn, ToolCallInfo, ExcalidrawElement, SceneToolResult } from "./types";
 import type { CanvasOps } from "./scene-utils";
 import { readScene, writeScene } from "./scene-utils";
+import { tryRedrawBoundText } from "./text-layout";
 
 export const TOOL_NAME = "autoLayout";
 
@@ -318,13 +319,30 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
     };
   });
 
-  writeScene(canvasOps, finalElements, files);
+  // recentre bound texts and redraw bounding boxes
+  const centered = [...finalElements];
+  for (let i = 0; i < centered.length; i++) {
+    const el = centered[i];
+    if (el.type !== "text") continue;
+    const containerId = (el as any).containerId as string | undefined;
+    if (!containerId) continue;
+    const container = nodeLookup.get(containerId);
+    if (!container) continue;
+    const width = (el as any).width as number | undefined;
+    const height = (el as any).height as number | undefined;
+    if (width === undefined || height === undefined) continue;
+    el.x = (container.x as number) + ((container.width as number) - width) / 2;
+    el.y = (container.y as number) + ((container.height as number) - height) / 2;
+    await tryRedrawBoundText(el, container, centered);
+  }
+
+  writeScene(canvasOps, centered, files);
 
   const output: SceneToolResult = {
     success: true,
     action: "auto-layout",
     message: `Auto layout applied to ${nodes.length} nodes`,
-    elements: finalElements,
+    elements: centered,
     files,
   };
 

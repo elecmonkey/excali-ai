@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AddToolOutputFn, ToolCallInfo, SceneToolResult, ExcalidrawElement } from "./types";
 import { readScene, writeScene, type CanvasOps } from "./scene-utils";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
+import { tryRedrawBoundText } from "./text-layout";
 
 export const TOOL_NAME = "updateNode";
 
@@ -45,6 +46,9 @@ export async function execute(
     return;
   }
 
+  const oldX = target.x as number;
+  const oldY = target.y as number;
+
   if (parsed.data.x !== undefined) target.x = parsed.data.x;
   if (parsed.data.y !== undefined) target.y = parsed.data.y;
   if (parsed.data.width !== undefined) target.width = parsed.data.width;
@@ -62,12 +66,26 @@ export async function execute(
   // Move bound text with container if position changed
   const moved = parsed.data.x !== undefined || parsed.data.y !== undefined;
   if (moved) {
-    const dx = parsed.data.x !== undefined ? parsed.data.x - (target.x as number) : 0;
-    const dy = parsed.data.y !== undefined ? parsed.data.y - (target.y as number) : 0;
+    const dx = (target.x as number) - oldX;
+    const dy = (target.y as number) - oldY;
+    const toRedraw: { text: any; container: any }[] = [];
     for (const el of elements) {
       if (el.type === "text" && (el as any).containerId === target.id) {
-        el.x = (el.x as number) + dx;
-        el.y = (el.y as number) + dy;
+        const width = (el as any).width as number | undefined;
+        const height = (el as any).height as number | undefined;
+        if (width !== undefined && height !== undefined) {
+          el.x = (target.x as number) + ((target.width as number) - width) / 2;
+          el.y = (target.y as number) + ((target.height as number) - height) / 2;
+          toRedraw.push({ text: el, container: target });
+        } else {
+          el.x = (el.x as number) + dx;
+          el.y = (el.y as number) + dy;
+        }
+      }
+    }
+    if (toRedraw.length) {
+      for (const { text, container } of toRedraw) {
+        await tryRedrawBoundText(text, container, elements);
       }
     }
   }
