@@ -93,10 +93,14 @@ export async function execute(
     type: parsed.data.type,
     x: parsed.data.x,
     y: parsed.data.y,
-    width: parsed.data.width,
-    height: parsed.data.height,
+    width: parsed.data.width ?? 140,
+    height: parsed.data.height ?? 60,
     label: parsed.data.label,
   });
+  // Normalize style to match default Excalidraw look
+  (el as any).strokeWidth = 2;
+  (el as any).fillStyle = "solid";
+  (el as any).roundness = null;
 
   const relPos = placeRelative(elements, parsed.data.relativeTo, parsed.data.placement, el.width, el.height);
   if (relPos) {
@@ -110,11 +114,7 @@ export async function execute(
 
   const additions: ExcalidrawElement[] = [el];
   if (parsed.data.label && parsed.data.type !== "text") {
-    // Dynamically import Excalidraw helpers to compute correct text bounds
-    const [{ redrawTextBoundingBox }, { newElementWith }]: any = await Promise.all([
-      import("@excalidraw/excalidraw"),
-      import("@excalidraw/excalidraw"),
-    ]);
+    const { redrawTextBoundingBox }: any = await import("@excalidraw/excalidraw");
 
     // Create a provisional text element bound to the container
     const textEl = createDefaultElement({
@@ -131,9 +131,13 @@ export async function execute(
     textEl.verticalAlign = "middle";
     textEl.originalText = parsed.data.label;
     textEl.autoResize = true;
+    textEl.fontSize = 20;
+    textEl.fontFamily = 5;
+    textEl.strokeWidth = 2;
+    textEl.fillStyle = "solid";
 
     // Use Excalidraw's redraw to center text within container
-    redrawTextBoundingBox(textEl, el as any, { elements: [] } as any);
+    redrawTextBoundingBox(textEl, el as any, { elements: [el, textEl] } as any);
 
     additions.push(textEl);
 
