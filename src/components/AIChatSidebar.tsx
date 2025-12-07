@@ -17,6 +17,53 @@ import { readScene } from "@/lib/client-tools/scene-utils";
 import { jsonToDsl } from "@/lib/dsl/json-mapper";
 import { serializeDSL } from "@/lib/dsl/serializer";
 
+function DslBadge({ dsl }: { dsl: string }) {
+  const [visible, setVisible] = useState(false);
+  const hideTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) {
+        window.clearTimeout(hideTimer.current);
+      }
+    };
+  }, []);
+
+  const onEnter = () => {
+    if (hideTimer.current) {
+      window.clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    setVisible(true);
+  };
+
+  const onLeave = () => {
+    hideTimer.current = window.setTimeout(() => setVisible(false), 500);
+  };
+
+  return (
+    <div className="relative flex items-start">
+      <button
+        aria-label="Show DSL snapshot"
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        className="h-4 w-4 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[9px] flex items-center justify-center border border-zinc-200 dark:border-zinc-700 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 dark:hover:text-blue-200"
+      >
+        D
+      </button>
+      <div
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        className={`absolute right-full top-0 mr-2 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg max-h-64 w-72 overflow-auto p-3 text-xs whitespace-pre-wrap z-10 transition-opacity duration-200 ${
+          visible ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        {dsl}
+      </div>
+    </div>
+  );
+}
+
 export default function AIChatSidebar() {
   const { updateScene, clearScene, getExcalidrawAPI, scene } = useExcalidrawContext();
   const [inputValue, setInputValue] = useState("");
@@ -140,6 +187,12 @@ export default function AIChatSidebar() {
     const marker = "\n\n[CURRENT_DIAGRAM_DSL]";
     const idx = text.indexOf(marker);
     return idx === -1 ? text : text.slice(0, idx);
+  };
+
+  const extractDsl = (text: string) => {
+    const marker = "\n\n[CURRENT_DIAGRAM_DSL]";
+    const idx = text.indexOf(marker);
+    return idx === -1 ? "" : text.slice(idx + marker.length).trim();
   };
 
   // Render tool part based on type and state
@@ -280,20 +333,17 @@ export default function AIChatSidebar() {
       {/* Header */}
       <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          AI Assistant
+          Chat with AI Assistant
         </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Ask me to help with your diagram
-        </p>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+        {messages.map((msg) => {
+          const textParts = msg.parts.filter((part) => (part as any).type === "text") as any[];
+          const firstText = textParts[0]?.text as string | undefined;
+          const dslSnippet = firstText ? extractDsl(firstText) : "";
+          const bubble = (
             <div
               className={`max-w-[85%] rounded-lg px-4 py-2 ${
                 msg.role === "user"
@@ -316,8 +366,24 @@ export default function AIChatSidebar() {
                 return renderToolPart(p, idx);
               })}
             </div>
-          </div>
-        ))}
+          );
+
+          return (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              {msg.role === "user" ? (
+                <div className="flex items-start gap-2">
+                  {dslSnippet ? <DslBadge dsl={dslSnippet} /> : null}
+                  {bubble}
+                </div>
+              ) : (
+                bubble
+              )}
+            </div>
+          );
+        })}
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg px-4 py-2">
