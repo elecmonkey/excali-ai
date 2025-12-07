@@ -115,6 +115,16 @@ Generate syntactically correct Mermaid code following the rules above. User will
     description: "Delete an edge by id.",
     inputSchema: z.object({ id: z.string() }),
   },
+  autoLayout: {
+    description:
+      "Run a simple force-directed layout to reduce overlaps. Optional nodes array limits which nodes move; otherwise all labeled rectangles/diamonds/ellipses are laid out. Use after severe overlaps.",
+    inputSchema: z
+      .object({
+        nodes: z.array(z.string()).optional(),
+        iterations: z.number().min(1).max(300).optional(),
+      })
+      .strip(),
+  },
 };
 
 /**
@@ -130,6 +140,7 @@ export const TOOL_NAMES = {
   INSERT_EDGE: "insertEdge",
   UPDATE_EDGE: "updateEdge",
   DELETE_EDGE: "deleteEdge",
+  AUTO_LAYOUT: "autoLayout",
 } as const;
 
 export type ToolName = typeof TOOL_NAMES[keyof typeof TOOL_NAMES];

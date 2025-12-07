@@ -245,7 +245,7 @@ export default function AIChatSidebar() {
     );
     void sendMessage({
       text: `[OVERLAP_FEEDBACK]\n` +
-        `Detected overlaps. Please compute geometry and move nodes so shapes do not intersect (leave a gap); avoid repeating the same coordinates.\n` +
+        `Detected overlaps. Please compute geometry and move nodes so shapes do not intersect (leave a gap); avoid repeating the same coordinates. If many overlaps remain, you may call the autoLayout tool (force-directed) to separate nodes, then fine-tune manually.\n` +
         `${lines.join("\n")}`,
     });
   }, [messages, scene.elements, status, sendMessage]);

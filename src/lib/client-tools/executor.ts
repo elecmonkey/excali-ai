@@ -14,6 +14,7 @@ import * as batchUpdateNodes from "./batch-update-nodes";
 import * as insertEdge from "./insert-edge";
 import * as updateEdge from "./update-edge";
 import * as deleteEdge from "./delete-edge";
+import * as autoLayout from "./auto-layout";
 import { applyMermaidResultToCanvas } from "./mermaid-utils";
 import type { 
   ToolCallInfo, 
@@ -36,6 +37,7 @@ export const TOOL_NAMES = {
   INSERT_EDGE: insertEdge.TOOL_NAME,
   UPDATE_EDGE: updateEdge.TOOL_NAME,
   DELETE_EDGE: deleteEdge.TOOL_NAME,
+  AUTO_LAYOUT: autoLayout.TOOL_NAME,
 } as const;
 
 /**
@@ -102,6 +104,11 @@ export async function executeAutoTool(
 
     if (deleteEdge.matches(toolCall.toolName)) {
       await deleteEdge.execute(toolCall, addToolOutput, canvasOps);
+      return true;
+    }
+
+    if (autoLayout.matches(toolCall.toolName)) {
+      await autoLayout.execute(toolCall, addToolOutput, canvasOps);
       return true;
     }
     
