@@ -22,9 +22,9 @@ export default function Home() {
     <ResizableSplitPane
       left={<ExcalidrawWrapper />}
       right={<AIChatSidebar />}
-      defaultLeftWidth={80}
+      defaultLeftWidth={70}
       minLeftWidth={50}
-      minRightWidth={15}
+      minRightWidth={25}
     />
   );
 }
