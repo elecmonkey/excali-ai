@@ -1,6 +1,8 @@
 # Excalidraw AI Agent (excali-ai)
 
-**AI-powered diagram editor that lets users create and modify Excalidraw diagrams through natural language. (Work in Progress)**
+[Work in Progress] **AI-powered diagram editor that lets users create and modify Excalidraw diagrams through natural language.**
+
+This project is built on top of [Excalidraw](https://github.com/excalidraw/excalidraw) and related open-source tools.
 
 ## Getting Started
 
