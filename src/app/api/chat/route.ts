@@ -21,15 +21,29 @@ Always check tool descriptions for diagram-specific syntax requirements before g
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
-  // Create OpenAI-compatible provider configured for BigModel API
-  const bigmodel = createOpenAICompatible({
-    name: "bigmodel",
-    apiKey: process.env.OPENAI_API_KEY || "",
-    baseURL: "https://open.bigmodel.cn/api/paas/v4",
+  // Validate required environment variables
+  const apiKey = process.env.OPENAI_API_KEY;
+  const baseURL = process.env.OPENAI_API_BASE;
+  const modelName = process.env.OPENAI_MODEL;
+
+  if (!apiKey || !baseURL || !modelName) {
+    return new Response(
+      JSON.stringify({ 
+        error: "Missing required environment variables. Please set OPENAI_API_KEY, OPENAI_API_BASE, and OPENAI_MODEL in .env.local" 
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Create OpenAI-compatible provider with configurable settings
+  const provider = createOpenAICompatible({
+    name: "custom-provider",
+    apiKey,
+    baseURL,
   });
 
   const result = streamText({
-    model: bigmodel("glm-4-flash"),
+    model: provider(modelName),
     system: systemPrompt,
     messages: convertToModelMessages(messages),
     tools: clientTools,
