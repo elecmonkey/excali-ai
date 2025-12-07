@@ -59,6 +59,19 @@ export async function execute(
     };
   }
 
+  // Move bound text with container if position changed
+  const moved = parsed.data.x !== undefined || parsed.data.y !== undefined;
+  if (moved) {
+    const dx = parsed.data.x !== undefined ? parsed.data.x - (target.x as number) : 0;
+    const dy = parsed.data.y !== undefined ? parsed.data.y - (target.y as number) : 0;
+    for (const el of elements) {
+      if (el.type === "text" && (el as any).containerId === target.id) {
+        el.x = (el.x as number) + dx;
+        el.y = (el.y as number) + dy;
+      }
+    }
+  }
+
   writeScene(canvasOps, elements, files as BinaryFiles);
 
   const output: SceneToolResult = {
