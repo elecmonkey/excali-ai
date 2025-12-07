@@ -21,6 +21,7 @@ import type {
   MermaidToolResult,
   ExcalidrawElement,
 } from "./types";
+import type { SceneToolResult } from "./types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 import type { CanvasOps } from "./scene-utils";
 
@@ -169,7 +170,7 @@ export function rejectReplaceDiagram(
  * Apply tool result to canvas (for use in useEffect)
  */
 export function applyToolResultToCanvas(
-  result: MermaidToolResult,
+  result: MermaidToolResult | SceneToolResult,
   canvasOps: {
     clearScene: () => void;
     updateScene: (elements: ExcalidrawElement[], files?: BinaryFiles) => void;
@@ -177,12 +178,30 @@ export function applyToolResultToCanvas(
     getExcalidrawAPI: () => any;
   }
 ): void {
-  applyMermaidResultToCanvas(
-    result,
-    canvasOps.clearScene,
-    canvasOps.updateScene,
-    canvasOps.getExcalidrawAPI
-  );
+  if (!result.success || !result.elements) return;
+
+  try {
+    console.debug("[applyToolResultToCanvas] applying", {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      action: (result as any).action,
+      count: result.elements?.length,
+    });
+    // For create/replace, keep the existing behavior (clear then set)
+    if ((result as MermaidToolResult).action === "create" || (result as MermaidToolResult).action === "replace") {
+      applyMermaidResultToCanvas(
+        result as MermaidToolResult,
+        canvasOps.clearScene,
+        canvasOps.updateScene,
+        canvasOps.getExcalidrawAPI
+      );
+      return;
+    }
+
+    // For incremental scene tools, just update the scene without clearing
+    canvasOps.updateScene(result.elements, (result as SceneToolResult).files);
+  } catch (err) {
+    console.error("[applyToolResultToCanvas] failed to apply result", err);
+  }
 }
 
 /**

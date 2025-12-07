@@ -33,21 +33,22 @@ Generate syntactically correct Mermaid code following the rules above. User will
     }),
   },
   insertNode: {
-    description: "Insert a node into the current diagram. Supports relative placement around an existing node.",
-    inputSchema: z.object({
-      id: z.string(),
-      label: z.string().optional(),
-      type: z.enum(["rectangle", "diamond", "ellipse", "text", "image", "iframe", "embeddable", "frame", "magicframe", "freedraw"]),
-      x: z.number().optional(),
-      y: z.number().optional(),
-      width: z.number().optional(),
-      height: z.number().optional(),
-      relativeTo: z.string().optional(),
-      placement: z.enum(["above", "below", "left", "right"]).optional(),
-      meta: z.record(z.string(), z.any()).optional(),
-      fileId: z.string().optional(),
-      points: z.array(z.tuple([z.number(), z.number()])).optional(),
-    }),
+    description: "Insert a node into the current diagram. Supports relative placement around an existing node. Id will be auto-generated; do NOT provide id.",
+    inputSchema: z
+      .object({
+        label: z.string().optional(),
+        type: z.enum(["rectangle", "diamond", "ellipse", "text", "image", "iframe", "embeddable", "frame", "magicframe", "freedraw"]),
+        x: z.number().optional(),
+        y: z.number().optional(),
+        width: z.number().optional(),
+        height: z.number().optional(),
+        relativeTo: z.string().optional(),
+        placement: z.enum(["above", "below", "left", "right"]).optional(),
+        meta: z.record(z.string(), z.any()).optional(),
+        fileId: z.string().optional(),
+        points: z.array(z.tuple([z.number(), z.number()])).optional(),
+      })
+      .strip(),
   },
   updateNode: {
     description: "Update an existing node (position, size, label, type, meta).",
@@ -84,17 +85,18 @@ Generate syntactically correct Mermaid code following the rules above. User will
     }),
   },
   insertEdge: {
-    description: "Insert an edge/arrow between two nodes. Supports line/arrow/elbow-arrow.",
-    inputSchema: z.object({
-      id: z.string(),
-      from: z.string(),
-      to: z.string(),
-      type: z.enum(["line", "arrow", "elbow-arrow", "curved-arrow"]).optional(),
-      startArrow: z.boolean().optional(),
-      endArrow: z.boolean().optional(),
-      label: z.string().optional(),
-      via: z.array(z.tuple([z.number(), z.number()])).optional(),
-    }),
+    description: "Insert an edge/arrow between two nodes. Supports line/arrow/elbow-arrow. Id will be auto-generated; do NOT provide id.",
+    inputSchema: z
+      .object({
+        from: z.string(),
+        to: z.string(),
+        type: z.enum(["line", "arrow", "elbow-arrow", "curved-arrow"]).optional(),
+        startArrow: z.boolean().optional(),
+        endArrow: z.boolean().optional(),
+        label: z.string().optional(),
+        via: z.array(z.tuple([z.number(), z.number()])).optional(),
+      })
+      .strip(),
   },
   updateEdge: {
     description: "Update an existing edge (bindings, arrowheads, label, via points).",

@@ -35,6 +35,7 @@ export interface MermaidToolResult extends ToolResultBase {
 export interface SceneToolResult extends ToolResultBase {
   elements?: ExcalidrawElement[];
   files?: BinaryFiles;
+  newId?: string;
 }
 
 /**

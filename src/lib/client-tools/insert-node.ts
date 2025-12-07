@@ -1,35 +1,45 @@
 import { z } from "zod";
 import type { AddToolOutputFn, ToolCallInfo, SceneToolResult, ExcalidrawElement } from "./types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
-import { readScene, writeScene, type CanvasOps } from "./scene-utils";
+import { readScene, writeScene, type CanvasOps, createDefaultElement } from "./scene-utils";
 
 export const TOOL_NAME = "insertNode";
 
-const schema = z.object({
-  id: z.string(),
-  label: z.string().optional(),
-  type: z.enum([
-    "rectangle",
-    "diamond",
-    "ellipse",
-    "text",
-    "image",
-    "iframe",
-    "embeddable",
-    "frame",
-    "magicframe",
-    "freedraw",
-  ]),
-  x: z.number().optional(),
-  y: z.number().optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  relativeTo: z.string().optional(),
-  placement: z.enum(["above", "below", "left", "right"]).optional(),
-  meta: z.record(z.string(), z.any()).optional(),
-  fileId: z.string().optional(),
-  points: z.array(z.tuple([z.number(), z.number()])).optional(),
-});
+const schema = z
+  .object({
+    // id intentionally not accepted; it will be auto-generated
+    label: z.string().optional(),
+    type: z.enum([
+      "rectangle",
+      "diamond",
+      "ellipse",
+      "text",
+      "image",
+      "iframe",
+      "embeddable",
+      "frame",
+      "magicframe",
+      "freedraw",
+    ]),
+    x: z.number().optional(),
+    y: z.number().optional(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    relativeTo: z.string().optional(),
+    placement: z.enum(["above", "below", "left", "right"]).optional(),
+    meta: z.record(z.string(), z.any()).optional(),
+    fileId: z.string().optional(),
+    points: z.array(z.tuple([z.number(), z.number()])).optional(),
+  })
+  .strip();
+
+function generateId(base?: string): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const uuid = (globalThis as any).crypto?.randomUUID?.();
+  if (uuid) return uuid;
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return base ? `${base}-${suffix}` : `node-${Date.now()}-${suffix}`;
+}
 
 function placeRelative(
   elements: ExcalidrawElement[],
@@ -71,23 +81,21 @@ export async function execute(
   }
 
   const { elements, files } = readScene(canvasOps);
-  if (elements.some((el) => el.id === parsed.data.id)) {
-    addToolOutput({
-      tool: TOOL_NAME,
-      toolCallId: toolCall.toolCallId,
-      output: { success: false, action: "insert-node", error: `Element ${parsed.data.id} already exists` },
-    });
-    return;
+  let elementId = generateId("node");
+  while (elements.some((el) => el.id === elementId)) {
+    elementId = generateId("node");
   }
+  console.debug("[insertNode] before insert", { count: elements.length, id: elementId });
 
-  const el: ExcalidrawElement = {
-    id: parsed.data.id,
+  const el: ExcalidrawElement = createDefaultElement({
+    id: elementId,
     type: parsed.data.type,
-    x: parsed.data.x ?? 0,
-    y: parsed.data.y ?? 0,
-    width: parsed.data.width ?? 160,
-    height: parsed.data.height ?? 80,
-  };
+    x: parsed.data.x,
+    y: parsed.data.y,
+    width: parsed.data.width,
+    height: parsed.data.height,
+    label: parsed.data.label,
+  });
 
   const relPos = placeRelative(elements, parsed.data.relativeTo, parsed.data.placement, el.width, el.height);
   if (relPos) {
@@ -95,19 +103,39 @@ export async function execute(
     el.y = relPos.y;
   }
 
-  if (parsed.data.label && parsed.data.type === "text") {
-    (el as { text: string }).text = parsed.data.label;
-  }
   if (parsed.data.fileId) (el as { fileId: string }).fileId = parsed.data.fileId;
   if (parsed.data.points) (el as { points: [number, number][] }).points = parsed.data.points;
   if (parsed.data.meta) (el as { customData: Record<string, unknown> }).customData = parsed.data.meta;
 
-  const nextElements = [...elements, el];
+  const additions: ExcalidrawElement[] = [el];
+  if (parsed.data.label && parsed.data.type !== "text") {
+    // Create a bound text label
+    const textEl = createDefaultElement({
+      id: generateId("text"),
+      type: "text",
+      x: el.x,
+      y: el.y,
+      width: parsed.data.width ?? 120,
+      height: parsed.data.height ?? 40,
+      label: parsed.data.label,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any;
+    textEl.containerId = elementId;
+    // center align by default
+    textEl.textAlign = "center";
+    textEl.verticalAlign = "middle";
+    additions.push(textEl);
+  }
+
+  const nextElements = [...elements, ...additions];
   writeScene(canvasOps, nextElements, files as BinaryFiles);
+  console.debug("[insertNode] after insert", { count: nextElements.length });
 
   const output: SceneToolResult = {
     success: true,
     action: "insert-node",
+    newId: elementId,
+    message: `Created ${elementId}`,
     elements: nextElements,
     files,
   };
@@ -117,6 +145,7 @@ export async function execute(
     toolCallId: toolCall.toolCallId,
     output,
   });
+  console.debug("[insertNode] output sent", { success: output.success, count: output.elements?.length });
 }
 
 export function matches(toolName: string) {

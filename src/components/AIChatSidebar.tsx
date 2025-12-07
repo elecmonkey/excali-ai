@@ -254,6 +254,17 @@ export default function AIChatSidebar() {
       }
     }
 
+    // Generic tools (node/edge ops)
+    if (p.type?.startsWith("tool-") && p.state === "output-available" && p.output) {
+      const ok = p.output?.success;
+      const msg = p.output?.message || (ok ? "Done" : p.output?.error || "Failed");
+      return (
+        <div key={idx} className={`text-xs my-2 ${ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+          {ok ? "✅" : "❌"} {msg}
+        </div>
+      );
+    }
+
     return null;
   };
 
