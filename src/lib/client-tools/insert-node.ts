@@ -110,22 +110,37 @@ export async function execute(
 
   const additions: ExcalidrawElement[] = [el];
   if (parsed.data.label && parsed.data.type !== "text") {
-    // Create a bound text label
+    const fontSize = 20;
+    const textHeight = fontSize * 1.25;
+    const padding = 20;
+    const textWidth = Math.max(40, Math.min(el.width - padding, parsed.data.label.length * fontSize * 0.6));
+    const textX = el.x + (el.width - textWidth) / 2;
+    const textY = el.y + (el.height - textHeight) / 2;
+
+    // Create a bound text label, centered within the container
     const textEl = createDefaultElement({
       id: generateId("text"),
       type: "text",
-      x: el.x,
-      y: el.y,
-      width: parsed.data.width ?? 120,
-      height: parsed.data.height ?? 40,
+      x: textX,
+      y: textY,
+      width: textWidth,
+      height: textHeight,
       label: parsed.data.label,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as any;
     textEl.containerId = elementId;
-    // center align by default
     textEl.textAlign = "center";
     textEl.verticalAlign = "middle";
+    textEl.originalText = parsed.data.label;
+    textEl.autoResize = true;
+    textEl.fontSize = fontSize;
+    textEl.baseline = fontSize * 0.9;
     additions.push(textEl);
+
+    // link back to container for layout
+    const bound = (el as any).boundElements ?? [];
+    bound.push({ type: "text", id: textEl.id });
+    (el as any).boundElements = bound;
   }
 
   const nextElements = [...elements, ...additions];
