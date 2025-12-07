@@ -11,15 +11,19 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^1.0.28",
+    "@ai-sdk/react": "^2.0.108",
     "@ant-design/cssinjs": "^2.0.1",
     "@ant-design/icons": "^6.1.0",
     "@ant-design/x": "^2.1.0",
     "@excalidraw/excalidraw": "^0.18.0",
+    "ai": "^5.0.108",
     "antd": "^6.0.1",
     "dayjs": "^1.11.19",
     "next": "16.0.7",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
