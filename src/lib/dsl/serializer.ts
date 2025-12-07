@@ -28,13 +28,17 @@ function serializeNode(node: NodeBlock): string {
   if (node.link) lines.push(`link: "${node.link}"`);
   if (node.locked !== undefined) lines.push(`locked: ${node.locked}`);
   if (node.ref) lines.push(`ref: ${node.ref}`);
+  const inEdges = node.inEdges ?? [];
+  const outEdges = node.outEdges ?? [];
+  lines.push(`inEdges: [${inEdges.map((e) => `{ edgeId: ${e.edgeId}${e.from !== undefined ? `, from: ${e.from ?? "null"}` : ""} }`).join(", ")}]`);
+  lines.push(`outEdges: [${outEdges.map((e) => `{ edgeId: ${e.edgeId}${e.to !== undefined ? `, to: ${e.to ?? "null"}` : ""} }`).join(", ")}]`);
   return `node ${node.id} {\n${indentLines(lines)}\n}`;
 }
 
 function serializeEdge(edge: EdgeBlock): string {
   const lines: string[] = [`kind: ${edge.edgeKind}`];
-  if (edge.from) lines.push(`from: ${edge.from}`);
-  if (edge.to) lines.push(`to: ${edge.to}`);
+  lines.push(`from: ${edge.from ?? "null"}`);
+  lines.push(`to: ${edge.to ?? "null"}`);
   if (edge.via) lines.push(`via: ${fmtVec2Array(edge.via)}`);
   if (edge.start) lines.push(`start: ${fmtVec2(edge.start)}`);
   if (edge.end) lines.push(`end: ${fmtVec2(edge.end)}`);

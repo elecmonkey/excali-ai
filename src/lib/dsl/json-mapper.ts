@@ -31,6 +31,8 @@ export interface ExcalidrawScene {
 }
 
 function toNodeBlock(el: ExcalidrawElement): NodeBlock | null {
+  // If this is a bound text (has containerId), treat it as label of container, not a standalone node
+  if (el.type === "text" && (el as any).containerId) return null;
   if (el.type === "arrow" || el.type === "line") return null;
 
   const node: NodeBlock = {
@@ -78,8 +80,8 @@ function toEdgeBlock(el: ExcalidrawElement): EdgeBlock | null {
     kind: "edge",
     id: el.id,
     edgeKind,
-    from: startBinding?.elementId,
-    to: endBinding?.elementId,
+    from: startBinding?.elementId ?? null,
+    to: endBinding?.elementId ?? null,
     start: points[0],
     end: points[points.length - 1],
     via,
@@ -97,20 +99,59 @@ function toEdgeBlock(el: ExcalidrawElement): EdgeBlock | null {
 }
 
 export function jsonToDsl(scene: ExcalidrawScene): DSLDocument {
-  const statements: Statement[] = [];
+  const nodeBlocks: NodeBlock[] = [];
+  const edgeBlocks: EdgeBlock[] = [];
+  const nodeMap = new Map<string, NodeBlock>();
 
   for (const el of scene.elements || []) {
     if (el.isDeleted) continue;
     const node = toNodeBlock(el);
     if (node) {
-      statements.push(node);
+      nodeBlocks.push(node);
+      nodeMap.set(node.id, node);
       continue;
     }
     const edge = toEdgeBlock(el);
     if (edge) {
-      statements.push(edge);
+      edgeBlocks.push(edge);
     }
   }
+
+  // attach bound text as node labels
+  for (const el of scene.elements || []) {
+    if (el.isDeleted) continue;
+    if (el.type === "text") {
+      const containerId = (el as any).containerId as string | undefined;
+      if (containerId && nodeMap.has(containerId)) {
+        const node = nodeMap.get(containerId)!;
+        if (!node.label) {
+          node.label = (el as { text?: string }).text;
+        }
+      }
+    }
+  }
+
+  // build adjacency lists per node
+  const inMap = new Map<string, { edgeId: string; from?: string | null }[]>();
+  const outMap = new Map<string, { edgeId: string; to?: string | null }[]>();
+  for (const edge of edgeBlocks) {
+    if (edge.to) {
+      const arr = inMap.get(edge.to) ?? [];
+      arr.push({ edgeId: edge.id, from: edge.from ?? null });
+      inMap.set(edge.to, arr);
+    }
+    if (edge.from) {
+      const arr = outMap.get(edge.from) ?? [];
+      arr.push({ edgeId: edge.id, to: edge.to ?? null });
+      outMap.set(edge.from, arr);
+    }
+  }
+  for (const node of nodeBlocks) {
+    node.inEdges = inMap.get(node.id) ?? [];
+    node.outEdges = outMap.get(node.id) ?? [];
+  }
+
+  const statements: Statement[] = [...nodeBlocks, ...edgeBlocks];
 
   // files
   for (const [id, file] of Object.entries(scene.files || {})) {

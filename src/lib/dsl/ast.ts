@@ -41,13 +41,15 @@ export interface NodeBlock extends BaseBlock {
   groups?: string[];
   link?: string;
   locked?: boolean;
+  inEdges?: { edgeId: string; from?: string | null }[];
+  outEdges?: { edgeId: string; to?: string | null }[];
 }
 
 export interface EdgeBlock extends BaseBlock {
   kind: "edge";
   edgeKind: EdgeKind;
-  from?: string;
-  to?: string;
+  from?: string | null;
+  to?: string | null;
   via?: Vec2[];
   start?: Vec2;
   end?: Vec2;
