@@ -26,10 +26,10 @@ async function getExcalidrawUtils() {
  */
 function detectDiagramType(syntax: string): string {
   const firstLine = syntax.trim().split('\n')[0].toLowerCase();
-  if (firstLine.includes('classDiagram')) return 'classDiagram';
-  if (firstLine.includes('sequenceDiagram')) return 'sequenceDiagram';
-  if (firstLine.includes('erDiagram')) return 'erDiagram';
-  if (firstLine.includes('stateDiagram')) return 'stateDiagram';
+  if (firstLine.includes('classdiagram')) return 'classDiagram';
+  if (firstLine.includes('sequencediagram')) return 'sequenceDiagram';
+  if (firstLine.includes('erdiagram')) return 'erDiagram';
+  if (firstLine.includes('statediagram')) return 'stateDiagram';
   if (firstLine.includes('gantt')) return 'gantt';
   if (firstLine.includes('pie')) return 'pie';
   if (firstLine.includes('graph') || firstLine.includes('flowchart')) return 'flowchart';
