@@ -16,6 +16,7 @@ import { AddToolOutputFn } from "@/lib/client-tools/types";
 import { readScene } from "@/lib/client-tools/scene-utils";
 import { jsonToDsl } from "@/lib/dsl/json-mapper";
 import { serializeDSL } from "@/lib/dsl/serializer";
+import { detectOverlaps } from "@/lib/geometry/overlap";
 
 function DslBadge({ dsl }: { dsl: string }) {
   const [visible, setVisible] = useState(false);
@@ -69,6 +70,7 @@ export default function AIChatSidebar() {
   const [inputValue, setInputValue] = useState("");
   const processedOutputs = useRef<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastOverlapHash = useRef<string>("");
 
   // Canvas operations for tool execution
   const canvasOps = useCallback(
@@ -194,6 +196,42 @@ export default function AIChatSidebar() {
     const idx = text.indexOf(marker);
     return idx === -1 ? "" : text.slice(idx + marker.length).trim();
   };
+
+  const hashScene = (elements: any[]) => {
+    const sig = elements
+      .map((el) => `${el.id || ""}:${el.versionNonce || el.version || ""}:${el.x}:${el.y}`)
+      .sort()
+      .join("|");
+    return sig;
+  };
+
+  // Auto overlap feedback after assistant turn completes
+  useEffect(() => {
+    if (status !== "ready") return;
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistant) return;
+    // Skip if assistant still has streaming/pending parts
+    const pending = lastAssistant.parts.some((part: any) =>
+      part.state === "input-streaming" || part.state === "input-available" || part.state === "output-streaming"
+    );
+    if (pending) return;
+
+    const hash = hashScene(scene.elements as any[]);
+    if (hash === lastOverlapHash.current) return;
+    lastOverlapHash.current = hash;
+
+    const overlaps = detectOverlaps(scene.elements as any[]);
+    if (!overlaps.length) return;
+
+    const lines = overlaps.map(
+      (o) => `- a: ${o.a}, b: ${o.b}, ratio: ${o.overlapRatio.toFixed(2)}, area: ${o.overlapArea.toFixed(1)}`
+    );
+    void sendMessage({
+      text: `[OVERLAP_FEEDBACK]\n` +
+        `Detected overlaps. Please compute geometry and move nodes so shapes do not intersect (leave a gap); avoid repeating the same coordinates.\n` +
+        `${lines.join("\n")}`,
+    });
+  }, [messages, scene.elements, status, sendMessage]);
 
   // Render tool part based on type and state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -343,12 +381,16 @@ export default function AIChatSidebar() {
           const textParts = msg.parts.filter((part) => (part as any).type === "text") as any[];
           const firstText = textParts[0]?.text as string | undefined;
           const dslSnippet = firstText ? extractDsl(firstText) : "";
+          const isOverlapFeedback = firstText?.startsWith("[OVERLAP_FEEDBACK]");
           const bubble = (
             <div
-              className={`max-w-[85%] rounded-lg px-4 py-2 ${
-                msg.role === "user"
-                  ? "bg-blue-500 text-white"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+              className={`max-w-[85%] rounded-lg ${
+                isOverlapFeedback
+                  ? "bg-transparent shadow-none p-0 text-zinc-900 dark:text-zinc-100"
+                  : "px-4 py-2 " +
+                    (msg.role === "user"
+                      ? "bg-blue-500 text-white"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100")
               }`}
             >
               {msg.parts.map((part, idx) => {
@@ -356,9 +398,24 @@ export default function AIChatSidebar() {
                 const p = part as any;
 
                 if (p.type === "text") {
+                  const text = p.text as string;
+                  if (text.startsWith("[OVERLAP_FEEDBACK]")) {
+                    const lines = text.split("\n").slice(1);
+                    return (
+                      <div
+                        key={idx}
+                        className="text-xs bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-600 rounded-md p-2 space-y-1"
+                      >
+                        <div className="font-medium">⚠️ Overlap detected</div>
+                        {lines.map((l: string, i: number) => (
+                          <div key={i}>{l.replace(/^- /, "")}</div>
+                        ))}
+                      </div>
+                    );
+                  }
                   return (
                     <p key={idx} className="text-sm whitespace-pre-wrap">
-                      {displayText(p.text)}
+                      {displayText(text)}
                     </p>
                   );
                 }
@@ -371,11 +428,13 @@ export default function AIChatSidebar() {
           return (
             <div
               key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${
+                isOverlapFeedback ? "justify-start" : msg.role === "user" ? "justify-end" : "justify-start"
+              }`}
             >
               {msg.role === "user" ? (
                 <div className="flex items-start gap-2">
-                  {dslSnippet ? <DslBadge dsl={dslSnippet} /> : null}
+                  {dslSnippet && !isOverlapFeedback ? <DslBadge dsl={dslSnippet} /> : null}
                   {bubble}
                 </div>
               ) : (
