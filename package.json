@@ -17,6 +17,7 @@
     "@ant-design/icons": "^6.1.0",
     "@ant-design/x": "^2.1.0",
     "@excalidraw/excalidraw": "^0.18.0",
+    "@excalidraw/mermaid-to-excalidraw": "^2.0.0",
     "ai": "^5.0.108",
     "antd": "^6.0.1",
     "dayjs": "^1.11.19",
