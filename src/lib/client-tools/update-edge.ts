@@ -176,6 +176,7 @@ export async function execute(
   newEdge.endBinding = { elementId: toId, focus: endInfo.focus, gap: 4, fixedPoint: null };
   if (type === "elbow-arrow") newEdge.elbowed = true;
   if (type === "curved-arrow") newEdge.roundness = { type: 2 };
+  else if (type !== "line" && !newEdge.elbowed) newEdge.roundness = { type: 2 };
   if (parsed.data.startArrow !== undefined) newEdge.startArrowhead = parsed.data.startArrow ? "arrow" : null;
   else newEdge.startArrowhead = (edge as any).startArrowhead;
   if (parsed.data.endArrow !== undefined) newEdge.endArrowhead = parsed.data.endArrow ? "arrow" : null;

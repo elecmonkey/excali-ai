@@ -391,7 +391,7 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
       [dx, dy],
     ];
 
-    return {
+    const rebuilt: any = {
       ...el,
       x: startInfo.point[0],
       y: startInfo.point[1],
@@ -401,6 +401,10 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
       startBinding: { elementId: from, focus: startInfo.focus, gap: 4, fixedPoint: null },
       endBinding: { elementId: to, focus: endInfo.focus, gap: 4, fixedPoint: null },
     };
+    if (el.type === "arrow" && !(rebuilt as any).elbowed && !(rebuilt as any).roundness) {
+      rebuilt.roundness = { type: 2 };
+    }
+    return rebuilt;
   });
 
   // recentre bound texts and redraw bounding boxes

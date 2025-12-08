@@ -194,6 +194,7 @@ export async function execute(
     (el as any).endBinding = { elementId: parsed.data.to, focus: endInfo.focus, gap: 4, fixedPoint: null };
     if (parsed.data.type === "elbow-arrow") (el as any).elbowed = true;
     if (parsed.data.type === "curved-arrow") (el as any).roundness = { type: 2 };
+    else if (parsed.data.type !== "line") (el as any).roundness = { type: 2 };
     if (parsed.data.startArrow ?? parsed.data.startArrowhead) (el as any).startArrowhead = "arrow";
     if (parsed.data.endArrow ?? parsed.data.endArrowhead) (el as any).endArrowhead = "arrow";
     if (parsed.data.label) (el as any).label = parsed.data.label;
@@ -254,6 +255,9 @@ export async function execute(
       gap: ((el as any).endBinding?.gap as number | undefined) ?? 4,
       fixedPoint: null,
     };
+    if (parsed.data.type !== "line" && !(el as any).elbowed && !(el as any).roundness) {
+      (el as any).roundness = { type: 2 };
+    }
   }
 
   // Make edges visually consistent with native defaults (thicker stroke)
