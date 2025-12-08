@@ -142,6 +142,15 @@ Generate syntactically correct Mermaid code following the rules above. User will
       })
       .strip(),
   },
+  detectOverlap: {
+    description:
+      "Diagnostics only: detect overlapping nodes (polygons). Use sparingly—typically after you attempted a fix when the system warned about overlaps.",
+    inputSchema: z
+      .object({
+        minArea: z.number().optional().describe("Minimum intersection area to report (default 1)"),
+      })
+      .strip(),
+  },
 };
 
 /**
@@ -158,6 +167,7 @@ export const TOOL_NAMES = {
   UPDATE_EDGE: "updateEdge",
   DELETE_EDGE: "deleteEdge",
   AUTO_LAYOUT: "autoLayout",
+  DETECT_OVERLAP: "detectOverlap",
 } as const;
 
 export type ToolName = typeof TOOL_NAMES[keyof typeof TOOL_NAMES];
