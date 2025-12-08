@@ -77,8 +77,13 @@ Generate syntactically correct Mermaid code following the rules above. User will
     }),
   },
   deleteNode: {
-    description: "Delete a node and any edges referencing it.",
-    inputSchema: z.object({ id: z.string() }),
+    description: "Delete a node and its bound text. Optional: removeEdges=true to also delete edges referencing it.",
+    inputSchema: z
+      .object({
+        id: z.string(),
+        removeEdges: z.boolean().optional(),
+      })
+      .strip(),
   },
   batchUpdateNodes: {
     description: "Apply multiple node updates in one call.",
