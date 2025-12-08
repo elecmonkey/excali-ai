@@ -3,6 +3,7 @@ import type { AddToolOutputFn, ToolCallInfo, ExcalidrawElement, SceneToolResult 
 import type { CanvasOps } from "./scene-utils";
 import { readScene, writeScene } from "./scene-utils";
 import { tryRedrawBoundText } from "./text-layout";
+import { detectOverlaps } from "../geometry/overlap";
 
 export const TOOL_NAME = "autoLayout";
 
@@ -21,6 +22,17 @@ type NodeInfo = {
   h: number;
   vx: number;
   vy: number;
+};
+
+const estimateLabelWidth = (text: string | undefined, measured?: number) => {
+  if (measured && Number.isFinite(measured)) return measured;
+  if (!text) return 0;
+  let width = 0;
+  for (const ch of text) {
+    // crude: CJK + fullwidth punctuation treated as wide
+    width += /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(ch) ? 40 : 12;
+  }
+  return width;
 };
 
 function hasLabel(el: ExcalidrawElement, elements: ExcalidrawElement[]) {
@@ -68,6 +80,7 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
   // build edge list for spring attraction and edge repulsion helpers
   const edges: [string, string][] = [];
   const edgePairs: [NodeInfo, NodeInfo][] = [];
+  const edgeLabelWidth = new Map<string, number>();
   for (const el of elements) {
     if (el.type === "arrow" || el.type === "line") {
       const from = (el as any).startBinding?.elementId as string | undefined;
@@ -78,6 +91,18 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
       const a = nodes.find((n) => n.id === from);
       const b = nodes.find((n) => n.id === to);
       if (a && b) edgePairs.push([a, b]);
+
+      // capture label width from bound text or label property
+      let lblWidth = 0;
+      const boundText = elements.find(
+        (t) => t.type === "text" && (t as any).containerId === el.id
+      ) as any;
+      if (boundText) {
+        lblWidth = estimateLabelWidth(boundText.text as string | undefined, boundText.width as number | undefined);
+      } else if ((el as any).label) {
+        lblWidth = estimateLabelWidth((el as any).label as string);
+      }
+      edgeLabelWidth.set(el.id, lblWidth);
     }
   }
 
@@ -99,9 +124,20 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
 
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
   const minSide = (n: NodeInfo) => Math.min(n.w, n.h);
-  const restLength = (n: NodeInfo, m: NodeInfo) => {
-    const minSep = Math.max(minSide(n), minSide(m));
-    return Math.max((n.w + m.w) / 2 + 40, k, minSep);
+  const restLength = (a: NodeInfo, b: NodeInfo, labelWidth: number) => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const dirX = dx / dist;
+    const dirY = dy / dist;
+    const proj = (n: NodeInfo) => Math.abs(dirX) * (n.w / 2) + Math.abs(dirY) * (n.h / 2);
+    const marginA = proj(a);
+    const marginB = proj(b);
+
+    const base = Math.max((a.w + b.w) / 2 + 40, k, Math.max(minSide(a), minSide(b)));
+    const labelNeed = labelWidth ? labelWidth + 20 : 0;
+    const requiredAlongLine = marginA + marginB + Math.max(base, labelNeed, 80);
+    return requiredAlongLine;
   };
 
   for (let step = 0; step < iter; step++) {
@@ -143,7 +179,16 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
       const dx = a.x - b.x;
       const dy = a.y - b.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
-      const desired = restLength(a, b);
+      const lblW =
+        edgeLabelWidth.get(
+          elements.find(
+            (e) =>
+              (e.type === "arrow" || e.type === "line") &&
+              (e as any).startBinding?.elementId === from &&
+              (e as any).endBinding?.elementId === to
+          )?.id || ""
+        ) || 0;
+      const desired = restLength(a, b, lblW);
       const force = (dist - desired) * 0.02;
       const fxVal = (force * dx) / dist;
       const fyVal = (force * dy) / dist;
@@ -342,6 +387,46 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
     el.y = (container.y as number) + ((container.height as number) - height) / 2;
     await tryRedrawBoundText(el, container, centered);
   }
+
+  // Post-process: resolve overlaps by pushing nodes apart
+  const resolveOverlaps = () => {
+    let overlaps = detectOverlaps(centered, 1);
+    if (!overlaps.length) return;
+    const nodeLookup2 = new Map<string, ExcalidrawElement>();
+    for (const el of centered) {
+      if (["rectangle", "diamond", "ellipse"].includes(el.type as string)) {
+        nodeLookup2.set(el.id, el);
+      }
+    }
+    let guard = 0;
+    while (overlaps.length && guard < 10) {
+      for (const ov of overlaps) {
+        const a = nodeLookup2.get(ov.a);
+        const b = nodeLookup2.get(ov.b);
+        if (!a || !b) continue;
+        const ax = (a.x as number) + (a.width as number) / 2;
+        const ay = (a.y as number) + (a.height as number) / 2;
+        const bx = (b.x as number) + (b.width as number) / 2;
+        const by = (b.y as number) + (b.height as number) / 2;
+        let dx = ax - bx;
+        let dy = ay - by;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        dx /= dist;
+        dy /= dist;
+        // push each by half the needed gap plus padding
+        const pad = 10;
+        const push = Math.sqrt(ov.overlapArea) / 2 + pad;
+        a.x = (a.x as number) + dx * push;
+        a.y = (a.y as number) + dy * push;
+        b.x = (b.x as number) - dx * push;
+        b.y = (b.y as number) - dy * push;
+      }
+      overlaps = detectOverlaps(centered, 1);
+      guard++;
+    }
+  };
+
+  resolveOverlaps();
 
   writeScene(canvasOps, centered, files);
 
