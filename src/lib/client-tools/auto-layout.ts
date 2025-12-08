@@ -295,63 +295,95 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
       (toEl.y as number) + (toEl.height as number) / 2,
     ];
 
-    const intersectWithRect = (
+    const intersectOnShape = (
       rect: ExcalidrawElement | undefined,
       target: [number, number]
     ): { point: [number, number]; focus: number } => {
       if (!rect) return { point: target, focus: 0.5 };
       const cx = (rect.x as number) + (rect.width as number) / 2;
       const cy = (rect.y as number) + (rect.height as number) / 2;
-      const dx = target[0] - cx;
-      const dy = target[1] - cy;
-      const dirX = dx === 0 && dy === 0 ? 1 : dx;
-      const dirY = dx === 0 && dy === 0 ? 0 : dy;
-      const minX = rect.x as number;
-      const maxX = (rect.x as number) + (rect.width as number);
-      const minY = rect.y as number;
-      const maxY = (rect.y as number) + (rect.height as number);
-      const candidates: { t: number; point: [number, number]; edge: "top" | "right" | "bottom" | "left" }[] = [];
+      let dx = target[0] - cx;
+      let dy = target[1] - cy;
+      if (dx === 0 && dy === 0) dx = 1; // avoid zero vector
 
-      if (dirX !== 0) {
-        const tLeft = (minX - cx) / dirX;
-        const yLeft = cy + tLeft * dirY;
-        if (tLeft > 0 && yLeft >= minY && yLeft <= maxY) candidates.push({ t: tLeft, point: [minX, yLeft], edge: "left" });
+      const angle = (rect as any).angle as number | undefined;
+      const hasAngle = angle && angle !== 0;
+      const sin = hasAngle ? Math.sin(-angle!) : 0;
+      const cos = hasAngle ? Math.cos(-angle!) : 1;
+      const rotateToLocal = (px: number, py: number) => {
+        if (!hasAngle) return [px, py] as [number, number];
+        const rx = px * cos - py * sin;
+        const ry = px * sin + py * cos;
+        return [rx, ry] as [number, number];
+      };
+      const rotateToWorld = (px: number, py: number) => {
+        if (!hasAngle) return [px, py] as [number, number];
+        const rx = px * cos + py * sin;
+        const ry = -px * sin + py * cos;
+        return [rx, ry] as [number, number];
+      };
 
-        const tRight = (maxX - cx) / dirX;
-        const yRight = cy + tRight * dirY;
-        if (tRight > 0 && yRight >= minY && yRight <= maxY)
-          candidates.push({ t: tRight, point: [maxX, yRight], edge: "right" });
+      const [ldx, ldy] = rotateToLocal(dx, dy);
+
+      let localPoint: [number, number];
+      if (rect.type === "ellipse") {
+        const rx = (rect.width as number) / 2;
+        const ry = (rect.height as number) / 2;
+        const t = 1 / Math.sqrt((ldx * ldx) / (rx * rx) + (ldy * ldy) / (ry * ry));
+        localPoint = [ldx * t, ldy * t];
+      } else if (rect.type === "diamond") {
+        const hx = (rect.width as number) / 2;
+        const hy = (rect.height as number) / 2;
+        const k = Math.abs(ldx) / hx + Math.abs(ldy) / hy || 1;
+        localPoint = [ldx / k, ldy / k];
+      } else {
+        // rectangle fallback: clamp to edges along direction
+        const minX = -(rect.width as number) / 2;
+        const maxX = (rect.width as number) / 2;
+        const minY = -(rect.height as number) / 2;
+        const maxY = (rect.height as number) / 2;
+        const candidates: { t: number; p: [number, number]; edge: "top" | "right" | "bottom" | "left" }[] = [];
+        if (ldx !== 0) {
+          const tL = (minX) / ldx;
+          const yL = tL * ldy;
+          if (tL > 0 && yL >= minY && yL <= maxY) candidates.push({ t: tL, p: [minX, yL], edge: "left" });
+          const tR = (maxX) / ldx;
+          const yR = tR * ldy;
+          if (tR > 0 && yR >= minY && yR <= maxY) candidates.push({ t: tR, p: [maxX, yR], edge: "right" });
+        }
+        if (ldy !== 0) {
+          const tT = (minY) / ldy;
+          const xT = tT * ldx;
+          if (tT > 0 && xT >= minX && xT <= maxX) candidates.push({ t: tT, p: [xT, minY], edge: "top" });
+          const tB = (maxY) / ldy;
+          const xB = tB * ldx;
+          if (tB > 0 && xB >= minX && xB <= maxX) candidates.push({ t: tB, p: [xB, maxY], edge: "bottom" });
+        }
+        const hit = candidates.sort((a, b) => a.t - b.t)[0];
+        localPoint = hit ? hit.p : [0, 0];
       }
 
-      if (dirY !== 0) {
-        const tTop = (minY - cy) / dirY;
-        const xTop = cx + tTop * dirX;
-        if (tTop > 0 && xTop >= minX && xTop <= maxX) candidates.push({ t: tTop, point: [xTop, minY], edge: "top" });
+      const [wx, wy] = rotateToWorld(localPoint[0], localPoint[1]);
+      const px = cx + wx;
+      const py = cy + wy;
 
-        const tBottom = (maxY - cy) / dirY;
-        const xBottom = cx + tBottom * dirX;
-        if (tBottom > 0 && xBottom >= minX && xBottom <= maxX)
-          candidates.push({ t: tBottom, point: [xBottom, maxY], edge: "bottom" });
-      }
-
-      const hit = candidates.sort((a, b) => a.t - b.t)[0];
-      if (!hit) return { point: target, focus: 0.5 };
-
-      const [px, py] = hit.point;
+      // Approximate focus by quadrant mapping (0-top, 0.25-right, 0.5-bottom, 0.75-left)
+      const edgeAngle = Math.atan2(py - cy, px - cx);
+      const normAngle = (edgeAngle + 2 * Math.PI) % (2 * Math.PI);
       const focus =
-        hit.edge === "top"
-          ? ((px - minX) / (rect.width as number)) * 0.25
-          : hit.edge === "right"
-            ? 0.25 + ((py - minY) / (rect.height as number)) * 0.25
-            : hit.edge === "bottom"
-              ? 0.5 + ((maxX - px) / (rect.width as number)) * 0.25
-              : 0.75 + ((maxY - py) / (rect.height as number)) * 0.25;
+        normAngle < Math.PI / 2
+          ? 0.25 * (normAngle / (Math.PI / 2))
+          : normAngle < Math.PI
+            ? 0.25 + 0.25 * ((normAngle - Math.PI / 2) / (Math.PI / 2))
+            : normAngle < (3 * Math.PI) / 2
+              ? 0.5 + 0.25 * ((normAngle - Math.PI) / (Math.PI / 2))
+              : 0.75 + 0.25 * ((normAngle - (3 * Math.PI) / 2) / (Math.PI / 2));
 
-      return { point: hit.point, focus };
+      return { point: [px, py], focus };
     };
 
-    const startInfo = intersectWithRect(fromEl, toCenter);
-    const endInfo = intersectWithRect(toEl, fromCenter);
+    const startInfo = intersectOnShape(fromEl, toCenter);
+    const endInfo = intersectOnShape(toEl, fromCenter);
     const dx = endInfo.point[0] - startInfo.point[0];
     const dy = endInfo.point[1] - startInfo.point[1];
     const points: [number, number][] = [

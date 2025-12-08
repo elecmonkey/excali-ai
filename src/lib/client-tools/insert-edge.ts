@@ -55,66 +55,89 @@ export async function execute(
   const fromEl = elements.find((el) => el.id === parsed.data.from);
   const toEl = elements.find((el) => el.id === parsed.data.to);
 
-  const intersectWithRect = (rect: ExcalidrawElement | undefined, target: [number, number]) => {
+  const intersectOnShape = (rect: ExcalidrawElement | undefined, target: [number, number]) => {
     if (!rect) return { point: target, focus: 0.5 };
     const cx = rect.x + rect.width / 2;
     const cy = rect.y + rect.height / 2;
-    const dx = target[0] - cx;
-    const dy = target[1] - cy;
-    // Avoid zero-length direction
-    const dirX = dx === 0 && dy === 0 ? 1 : dx;
-    const dirY = dx === 0 && dy === 0 ? 0 : dy;
+    let dx = target[0] - cx;
+    let dy = target[1] - cy;
+    if (dx === 0 && dy === 0) dx = 1;
 
-    const minX = rect.x;
-    const maxX = rect.x + rect.width;
-    const minY = rect.y;
-    const maxY = rect.y + rect.height;
+    const angle = (rect as any).angle as number | undefined;
+    const hasAngle = angle && angle !== 0;
+    const sin = hasAngle ? Math.sin(-angle!) : 0;
+    const cos = hasAngle ? Math.cos(-angle!) : 1;
+    const rotToLocal = (px: number, py: number) => {
+      if (!hasAngle) return [px, py] as [number, number];
+      return [px * cos - py * sin, px * sin + py * cos] as [number, number];
+    };
+    const rotToWorld = (px: number, py: number) => {
+      if (!hasAngle) return [px, py] as [number, number];
+      return [px * cos + py * sin, -px * sin + py * cos] as [number, number];
+    };
 
-    const candidates: { t: number; point: [number, number]; edge: "top" | "right" | "bottom" | "left" }[] = [];
+    const [ldx, ldy] = rotToLocal(dx, dy);
 
-    if (dirX !== 0) {
-      const tLeft = (minX - cx) / dirX;
-      const yLeft = cy + tLeft * dirY;
-      if (tLeft > 0 && yLeft >= minY && yLeft <= maxY) candidates.push({ t: tLeft, point: [minX, yLeft], edge: "left" });
-
-      const tRight = (maxX - cx) / dirX;
-      const yRight = cy + tRight * dirY;
-      if (tRight > 0 && yRight >= minY && yRight <= maxY)
-        candidates.push({ t: tRight, point: [maxX, yRight], edge: "right" });
+    let localPoint: [number, number];
+    if (rect.type === "ellipse") {
+      const rx = rect.width / 2;
+      const ry = rect.height / 2;
+      const t = 1 / Math.sqrt((ldx * ldx) / (rx * rx) + (ldy * ldy) / (ry * ry));
+      localPoint = [ldx * t, ldy * t];
+    } else if (rect.type === "diamond") {
+      const hx = rect.width / 2;
+      const hy = rect.height / 2;
+      const k = Math.abs(ldx) / hx + Math.abs(ldy) / hy || 1;
+      localPoint = [ldx / k, ldy / k];
+    } else {
+      const minX = -rect.width / 2;
+      const maxX = rect.width / 2;
+      const minY = -rect.height / 2;
+      const maxY = rect.height / 2;
+      const candidates: { t: number; p: [number, number]; edge: "top" | "right" | "bottom" | "left" }[] = [];
+      if (ldx !== 0) {
+        const tL = minX / ldx;
+        const yL = tL * ldy;
+        if (tL > 0 && yL >= minY && yL <= maxY) candidates.push({ t: tL, p: [minX, yL], edge: "left" });
+        const tR = maxX / ldx;
+        const yR = tR * ldy;
+        if (tR > 0 && yR >= minY && yR <= maxY) candidates.push({ t: tR, p: [maxX, yR], edge: "right" });
+      }
+      if (ldy !== 0) {
+        const tT = minY / ldy;
+        const xT = tT * ldx;
+        if (tT > 0 && xT >= minX && xT <= maxX) candidates.push({ t: tT, p: [xT, minY], edge: "top" });
+        const tB = maxY / ldy;
+        const xB = tB * ldx;
+        if (tB > 0 && xB >= minX && xB <= maxX) candidates.push({ t: tB, p: [xB, maxY], edge: "bottom" });
+      }
+      const hit = candidates.sort((a, b) => a.t - b.t)[0];
+      localPoint = hit ? hit.p : [0, 0];
     }
 
-    if (dirY !== 0) {
-      const tTop = (minY - cy) / dirY;
-      const xTop = cx + tTop * dirX;
-      if (tTop > 0 && xTop >= minX && xTop <= maxX) candidates.push({ t: tTop, point: [xTop, minY], edge: "top" });
+    const [wx, wy] = rotToWorld(localPoint[0], localPoint[1]);
+    const px = cx + wx;
+    const py = cy + wy;
 
-      const tBottom = (maxY - cy) / dirY;
-      const xBottom = cx + tBottom * dirX;
-      if (tBottom > 0 && xBottom >= minX && xBottom <= maxX)
-        candidates.push({ t: tBottom, point: [xBottom, maxY], edge: "bottom" });
-    }
-
-    const hit = candidates.sort((a, b) => a.t - b.t)[0];
-    if (!hit) return { point: target, focus: 0.5 };
-
-    const [px, py] = hit.point;
+    const edgeAngle = Math.atan2(py - cy, px - cx);
+    const normAngle = (edgeAngle + 2 * Math.PI) % (2 * Math.PI);
     const focus =
-      hit.edge === "top"
-        ? ((px - minX) / rect.width) * 0.25
-        : hit.edge === "right"
-          ? 0.25 + ((py - minY) / rect.height) * 0.25
-          : hit.edge === "bottom"
-            ? 0.5 + ((maxX - px) / rect.width) * 0.25
-            : 0.75 + ((maxY - py) / rect.height) * 0.25;
+      normAngle < Math.PI / 2
+        ? 0.25 * (normAngle / (Math.PI / 2))
+        : normAngle < Math.PI
+          ? 0.25 + 0.25 * ((normAngle - Math.PI / 2) / (Math.PI / 2))
+          : normAngle < (3 * Math.PI) / 2
+            ? 0.5 + 0.25 * ((normAngle - Math.PI) / (Math.PI / 2))
+            : 0.75 + 0.25 * ((normAngle - (3 * Math.PI) / 2) / (Math.PI / 2));
 
-    return { point: hit.point, focus };
+    return { point: [px, py], focus };
   };
 
   const fromCenter = fromEl ? [fromEl.x + fromEl.width / 2, fromEl.y + fromEl.height / 2] : [0, 0];
   const toCenter = toEl ? [toEl.x + toEl.width / 2, toEl.y + toEl.height / 2] : [100, 0];
 
-  const startInfo = intersectWithRect(fromEl, toCenter as [number, number]);
-  const endInfo = intersectWithRect(toEl, fromCenter as [number, number]);
+  const startInfo = intersectOnShape(fromEl, toCenter as [number, number]);
+  const endInfo = intersectOnShape(toEl, fromCenter as [number, number]);
 
   const dx = endInfo.point[0] - startInfo.point[0];
   const dy = endInfo.point[1] - startInfo.point[1];
@@ -208,6 +231,29 @@ export async function execute(
       parsed.data.to,
       focusByAxis(fromCenter[1] - toCenter[1], fromCenter[0] - toCenter[0], fromCenter[1] - toCenter[1])
     );
+
+    // Force geometry to true shape intersections to avoid bounding-rect artifacts
+    const startInfo2 = intersectOnShape(fromEl, toCenter as [number, number]);
+    const endInfo2 = intersectOnShape(toEl, fromCenter as [number, number]);
+    const dx2 = endInfo2.point[0] - startInfo2.point[0];
+    const dy2 = endInfo2.point[1] - startInfo2.point[1];
+    (el as any).x = startInfo2.point[0];
+    (el as any).y = startInfo2.point[1];
+    (el as any).width = Math.abs(dx2) || 1;
+    (el as any).height = Math.abs(dy2) || 1;
+    (el as any).points = [[0, 0], ...(parsed.data.via || []), [dx2, dy2]];
+    (el as any).startBinding = {
+      elementId: parsed.data.from,
+      focus: startInfo2.focus,
+      gap: ((el as any).startBinding?.gap as number | undefined) ?? 4,
+      fixedPoint: null,
+    };
+    (el as any).endBinding = {
+      elementId: parsed.data.to,
+      focus: endInfo2.focus,
+      gap: ((el as any).endBinding?.gap as number | undefined) ?? 4,
+      fixedPoint: null,
+    };
   }
 
   // Make edges visually consistent with native defaults (thicker stroke)
