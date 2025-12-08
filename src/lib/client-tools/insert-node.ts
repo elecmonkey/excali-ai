@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AddToolOutputFn, ToolCallInfo, SceneToolResult, ExcalidrawElement } from "./types";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
 import { readScene, writeScene, type CanvasOps, createDefaultElement } from "./scene-utils";
+import { buildNodeSkeleton, convertSkeletons } from "./skeleton-builders";
 
 export const TOOL_NAME = "insertNode";
 
@@ -87,7 +88,7 @@ export async function execute(
   }
   console.debug("[insertNode] before insert", { count: elements.length, id: elementId });
 
-  const el: ExcalidrawElement = createDefaultElement({
+  const skeleton = buildNodeSkeleton({
     id: elementId,
     type: parsed.data.type,
     x: parsed.data.x,
@@ -95,78 +96,79 @@ export async function execute(
     width: parsed.data.width ?? 140,
     height: parsed.data.height ?? 60,
     label: parsed.data.label,
+    meta: parsed.data.meta,
+    fileId: parsed.data.fileId,
+    points: parsed.data.points,
   });
-  // Normalize style to match default Excalidraw look
+
+  const converted = await convertSkeletons([skeleton], { regenerateIds: false });
+
+  let additions: ExcalidrawElement[] = [];
+  let el: ExcalidrawElement;
+
+  if (converted && converted.length) {
+    additions = converted as ExcalidrawElement[];
+    el = additions.find((e) => e.id === elementId) ?? additions[0];
+  } else {
+    el = createDefaultElement({
+      id: elementId,
+      type: parsed.data.type,
+      x: parsed.data.x,
+      y: parsed.data.y,
+      width: parsed.data.width ?? 140,
+      height: parsed.data.height ?? 60,
+      label: parsed.data.label,
+    });
+    (el as any).strokeWidth = 2;
+    (el as any).fillStyle = "solid";
+    (el as any).roundness = null;
+
+    additions = [el];
+    if (parsed.data.label && parsed.data.type !== "text") {
+      const textEl = createDefaultElement({
+        id: generateId("text"),
+        type: "text",
+        x: el.x,
+        y: el.y,
+        width: el.width,
+        height: el.height,
+        label: parsed.data.label,
+      }) as any;
+      textEl.containerId = elementId;
+      textEl.textAlign = "center";
+      textEl.verticalAlign = "middle";
+      textEl.originalText = parsed.data.label;
+      textEl.autoResize = true;
+      textEl.fontSize = 20;
+      textEl.fontFamily = 5;
+      textEl.strokeWidth = 2;
+      textEl.fillStyle = "solid";
+
+      additions.push(textEl as ExcalidrawElement);
+
+      const bound = (el as any).boundElements ?? [];
+      bound.push({ type: "text", id: textEl.id });
+      (el as any).boundElements = bound;
+    }
+  }
+
+  // Normalize style to match default Excalidraw look (container only)
   (el as any).strokeWidth = 2;
   (el as any).fillStyle = "solid";
   (el as any).roundness = null;
 
   const relPos = placeRelative(elements, parsed.data.relativeTo, parsed.data.placement, el.width, el.height);
   if (relPos) {
-    el.x = relPos.x;
-    el.y = relPos.y;
-  }
-
-  if (parsed.data.fileId) (el as { fileId: string }).fileId = parsed.data.fileId;
-  if (parsed.data.points) (el as { points: [number, number][] }).points = parsed.data.points;
-  if (parsed.data.meta) (el as { customData: Record<string, unknown> }).customData = parsed.data.meta;
-
-  const additions: ExcalidrawElement[] = [el];
-  if (parsed.data.label && parsed.data.type !== "text") {
-    const textEl = createDefaultElement({
-      id: generateId("text"),
-      type: "text",
-      x: el.x,
-      y: el.y,
-      width: el.width,
-      height: el.height,
-      label: parsed.data.label,
-    }) as any;
-    textEl.containerId = elementId;
-    textEl.textAlign = "center";
-    textEl.verticalAlign = "middle";
-    textEl.originalText = parsed.data.label;
-    textEl.autoResize = true;
-    textEl.fontSize = 20;
-    textEl.fontFamily = 5;
-    textEl.strokeWidth = 2;
-    textEl.fillStyle = "solid";
-
-    let redrawTextBoundingBox: undefined | ((...args: any[]) => void);
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const excalidraw = (await import("@excalidraw/excalidraw")) as unknown as {
-        redrawTextBoundingBox?: (...args: any[]) => void;
-      };
-      redrawTextBoundingBox = excalidraw.redrawTextBoundingBox;
-    } catch (err) {
-      console.warn("[insertNode] failed to load redrawTextBoundingBox; falling back to manual centering", err);
-    }
-
-    if (redrawTextBoundingBox) {
-      const map = new Map<string, ExcalidrawElement>();
-      for (const existing of elements) {
-        map.set(existing.id, existing);
+    const dx = relPos.x - (el.x as number);
+    const dy = relPos.y - (el.y as number);
+    additions = additions.map((item) => {
+      if (item.id === el.id) {
+        return { ...item, x: relPos.x, y: relPos.y };
       }
-      map.set(el.id, el);
-      map.set(textEl.id, textEl as unknown as ExcalidrawElement);
-      // Let Excalidraw compute exact text box and positioning within the container
-      redrawTextBoundingBox(textEl as any, el as any, map as any, false);
-    } else {
-      // Manual centering within container with padding
-      const padding = 10;
-      textEl.width = Math.max(40, el.width - padding * 2);
-      textEl.height = 25;
-      textEl.x = el.x + (el.width - textEl.width) / 2;
-      textEl.y = el.y + (el.height - textEl.height) / 2;
-      textEl.baseline = textEl.height * 0.9;
-    }
-
-    additions.push(textEl);
-
-    const bound = (el as any).boundElements ?? [];
-    bound.push({ type: "text", id: textEl.id });
-    (el as any).boundElements = bound;
+      return { ...item, x: (item.x as number) + dx, y: (item.y as number) + dy };
+    });
+    // update el reference
+    el = additions.find((a) => a.id === el.id) ?? el;
   }
 
   const nextElements = [...elements, ...additions];
