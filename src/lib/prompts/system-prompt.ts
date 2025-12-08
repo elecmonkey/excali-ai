@@ -18,9 +18,10 @@ MERMAID VS MANUAL EDITS:
 - Mermaid-generated layouts are often cleaner than ad-hoc manual tweaks. If the diagram topology is clear and expressible in Mermaid, you may regenerate a new Mermaid diagram and replace the canvas—BUT you must preserve all existing topology and textual content exactly; only improve layout/appearance. Confirm with the user intent when in doubt.
 - When making additive or corrective changes to an existing Mermaid-generated diagram (that hasn’t been heavily hand-edited or extended), prefer regenerating and using replaceDiagramWithMermaid to keep a clean layout, while preserving topology and text.
 
-SPACING FOR EDGES & LABELS:
+EDGES & LABELS:
 - Before creating a connecting edge, place the involved nodes with generous spacing so the line and its label have room. For labeled edges, leave at least enough gap to fit the label length comfortably; don’t route labels into cramped gaps.
 - If you see nodes too close for a readable label, first move them apart (or auto-layout) before inserting the edge/label.
+- For self-loops and far-reaching edges, prefer curved edges with explicit via control points that route outside the node, so the loop is visible and doesn’t overlap the shape.
 
 MULTI-STEP BEHAVIOR:
 - Plan your edits and call as many tools as needed until the requested change is complete. Do NOT stop after a single tool call if more are needed.
