@@ -104,6 +104,20 @@ export async function convertSkeletons(
   opts: { regenerateIds?: boolean } = { regenerateIds: false }
 ): Promise<ExcalidrawElement[] | null> {
   try {
+    // Avoid calling converter when bindings point to non-existent skeletons (it will throw noisy errors)
+    const idSet = new Set<string>();
+    for (const s of skeletons) {
+      if (s && typeof s.id === "string") idSet.add(s.id);
+    }
+    for (const s of skeletons) {
+      if (!s || (s.type !== "arrow" && s.type !== "line")) continue;
+      const startId = s.start?.id as string | undefined;
+      const endId = s.end?.id as string | undefined;
+      if ((startId && !idSet.has(startId)) || (endId && !idSet.has(endId))) {
+        return null;
+      }
+    }
+
     const mod = (await import("@excalidraw/excalidraw")) as any;
     const fn = mod.convertToExcalidrawElements as ((s: any, o?: any) => ExcalidrawElement[]) | undefined;
     if (!fn) return null;
