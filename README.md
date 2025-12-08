@@ -1,5 +1,7 @@
 # Excalidraw AI Agent (excali-ai)
 
+English | [简体中文](README.zh-CN.md)
+
 [Work in Progress] **AI-powered diagram editor that lets users create and modify Excalidraw diagrams through natural language.**
 
 This project is built on top of [Excalidraw](https://github.com/excalidraw/excalidraw) and related open-source tools.
@@ -31,8 +33,8 @@ pnpm dev
 
 ## Contributing
 
-PR welcomes!
+Issues & PR welcomes!
 
 ## License
 
-MIT License.
+MIT License
