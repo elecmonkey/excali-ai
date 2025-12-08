@@ -7,9 +7,9 @@
   "repository": "git+https://github.com/elecmonkey/excali-ai.git",
   "license": "MIT",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 8367",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 8367",
     "lint": "eslint",
     "type-check": "tsc --noEmit"
   },
