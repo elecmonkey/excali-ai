@@ -479,7 +479,7 @@ export default function AIChatSidebar() {
                           setConfirmTarget(msg.id);
                         }}
                         disabled={isLoading}
-                        className="h-5 w-5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-red-500 dark:text-red-300 text-[10px] flex items-center justify-center border border-zinc-200 dark:border-zinc-700 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="h-4 w-4 rounded-full bg-zinc-100 dark:bg-zinc-800 text-red-500 dark:text-red-300 text-[10px] flex items-center justify-center border border-zinc-200 dark:border-zinc-700 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Restore to this message snapshot"
                       >
                         ↺
@@ -487,7 +487,7 @@ export default function AIChatSidebar() {
                       {confirmTarget === msg.id && confirmPos &&
                         createPortal(
                           <div
-                            className="fixed z-[9999] bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg p-2 text-xs space-y-2"
+                            className="fixed z-9999 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg p-2 text-xs space-y-2"
                             style={{
                               top: confirmPos.top,
                               left: confirmPos.left,
