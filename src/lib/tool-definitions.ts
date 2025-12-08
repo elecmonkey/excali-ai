@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { MERMAID_SYNTAX_GUIDE } from "./mermaid-syntax-guide";
+import { MERMAID_SYNTAX_GUIDE } from "./prompts/mermaid-syntax-guide";
 
 /**
  * Tool definitions for Vercel AI SDK
