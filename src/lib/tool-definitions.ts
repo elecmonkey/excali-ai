@@ -111,17 +111,22 @@ Generate syntactically correct Mermaid code following the rules above. User will
       .strip(),
   },
   updateEdge: {
-    description: "Update an existing edge (bindings, arrowheads, label, via points).",
-    inputSchema: z.object({
-      id: z.string(),
-      from: z.string().optional(),
-      to: z.string().optional(),
-      type: z.string().optional(),
-      startArrow: z.boolean().optional(),
-      endArrow: z.boolean().optional(),
-      label: z.string().optional(),
-      via: z.array(z.tuple([z.number(), z.number()])).optional(),
-    }),
+    description:
+      "Update an existing edge (endpoints, type, arrowheads, label, via/points). If from/to not provided, keeps existing bindings.",
+    inputSchema: z
+      .object({
+        id: z.string().describe("Existing edge id"),
+        from: z.string().optional(),
+        to: z.string().optional(),
+        type: z.enum(["line", "arrow", "elbow-arrow", "curved-arrow"]).optional(),
+        startArrow: z.boolean().optional(),
+        endArrow: z.boolean().optional(),
+        label: z.string().optional(),
+        via: z.array(z.tuple([z.number(), z.number()])).optional(),
+        points: z.array(z.tuple([z.number(), z.number()])).optional(),
+        meta: z.record(z.string(), z.any()).optional(),
+      })
+      .strip(),
   },
   deleteEdge: {
     description: "Delete an edge by id.",
