@@ -45,6 +45,9 @@ export async function execute(
     ((globalThis as any).crypto?.randomUUID?.() as string) ||
     `${baseId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let edgeId = genId();
+  const genTextId = () =>
+    ((globalThis as any).crypto?.randomUUID?.() as string) ||
+    `edge-label-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   while (elements.some((el) => el.id === edgeId)) {
     edgeId = genId();
   }
@@ -210,6 +213,8 @@ export async function execute(
   // Make edges visually consistent with native defaults (thicker stroke)
   (el as any).strokeWidth = 2;
 
+  const additions: ExcalidrawElement[] = [];
+
   const updatedElements = elements.map((candidate) => {
     if (candidate.id === parsed.data.from || candidate.id === parsed.data.to) {
       const bound = [...(candidate.boundElements ?? [])];
@@ -221,7 +226,43 @@ export async function execute(
     return candidate;
   });
 
-  const nextElements = [...updatedElements, el];
+  // If label provided but no bound text exists, create one
+  if (parsed.data.label) {
+    const hasBoundText =
+      Array.isArray((el as any).boundElements) &&
+      (el as any).boundElements.some((b: any) => b.type === "text");
+    if (!hasBoundText) {
+      const lastPoint = Array.isArray((el as any).points) ? (el as any).points.slice(-1)[0] : [0, 0];
+      const dxLabel = Array.isArray(lastPoint) && lastPoint.length === 2 ? lastPoint[0] : 0;
+      const dyLabel = Array.isArray(lastPoint) && lastPoint.length === 2 ? lastPoint[1] : 0;
+      const labelEl = createDefaultElement({
+        id: genTextId(),
+        type: "text",
+        x: (el as any).x + dxLabel / 2,
+        y: (el as any).y + dyLabel / 2,
+        width: 100,
+        height: 25,
+        label: parsed.data.label,
+      }) as any;
+      labelEl.containerId = edgeId;
+      labelEl.textAlign = "center";
+      labelEl.verticalAlign = "middle";
+      labelEl.originalText = parsed.data.label;
+      labelEl.autoResize = true;
+      labelEl.fontSize = 20;
+      labelEl.fontFamily = 5;
+      labelEl.strokeWidth = 2;
+      labelEl.fillStyle = "solid";
+
+      additions.push(labelEl as ExcalidrawElement);
+
+      const bound = (el as any).boundElements ?? [];
+      bound.push({ type: "text", id: labelEl.id });
+      (el as any).boundElements = bound;
+    }
+  }
+
+  const nextElements = [...updatedElements, el, ...additions];
   writeScene(canvasOps, nextElements, files as BinaryFiles);
   console.debug("[insertEdge] after insert", { count: nextElements.length });
 
