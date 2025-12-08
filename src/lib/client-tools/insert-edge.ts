@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AddToolOutputFn, ToolCallInfo, SceneToolResult, ExcalidrawElement } from "./types";
 import { readScene, writeScene, type CanvasOps, createDefaultElement } from "./scene-utils";
 import type { BinaryFiles } from "@excalidraw/excalidraw/types";
+import { buildEdgeSkeleton, convertSkeletons } from "./skeleton-builders";
 
 export const TOOL_NAME = "insertEdge";
 
@@ -39,8 +40,10 @@ export async function execute(
   const { elements, files } = readScene(canvasOps);
   console.debug("[insertEdge] before insert", { count: elements.length });
   // auto-generate unique id
-  const baseId = "edge";  
-  const genId = () => ((globalThis as any).crypto?.randomUUID?.() as string) || `${baseId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const baseId = "edge";
+  const genId = () =>
+    ((globalThis as any).crypto?.randomUUID?.() as string) ||
+    `${baseId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let edgeId = genId();
   while (elements.some((el) => el.id === edgeId)) {
     edgeId = genId();
@@ -48,97 +51,147 @@ export async function execute(
 
   const fromEl = elements.find((el) => el.id === parsed.data.from);
   const toEl = elements.find((el) => el.id === parsed.data.to);
-  const fromCenter = fromEl ? [fromEl.x + fromEl.width / 2, fromEl.y + fromEl.height / 2] : [0, 0];
-  const toCenter = toEl ? [toEl.x + toEl.width / 2, toEl.y + toEl.height / 2] : [100, 0];
 
-  const intersectWithRect = (rect: ExcalidrawElement | undefined, target: [number, number]) => {
-    if (!rect) return { point: target, focus: 0.5 };
-    const cx = rect.x + rect.width / 2;
-    const cy = rect.y + rect.height / 2;
-    const dx = target[0] - cx;
-    const dy = target[1] - cy;
-    // Avoid zero-length direction
-    const dirX = dx === 0 && dy === 0 ? 1 : dx;
-    const dirY = dx === 0 && dy === 0 ? 0 : dy;
+  const skeleton = buildEdgeSkeleton({
+    id: edgeId,
+    type: parsed.data.type ?? "arrow",
+    from: parsed.data.from,
+    to: parsed.data.to,
+    via: parsed.data.via,
+    label: parsed.data.label,
+    startArrow: parsed.data.startArrow ?? parsed.data.startArrowhead,
+    endArrow: parsed.data.endArrow ?? parsed.data.endArrowhead,
+  });
 
-    const minX = rect.x;
-    const maxX = rect.x + rect.width;
-    const minY = rect.y;
-    const maxY = rect.y + rect.height;
+  const converted = await convertSkeletons([skeleton], { regenerateIds: false });
+  let el: ExcalidrawElement | null = (converted && converted[0]) as ExcalidrawElement | null;
 
-    const candidates: { t: number; point: [number, number]; edge: "top" | "right" | "bottom" | "left" }[] = [];
+  if (!el) {
+    // Fallback to manual construction
+    const fromCenter = fromEl ? [fromEl.x + fromEl.width / 2, fromEl.y + fromEl.height / 2] : [0, 0];
+    const toCenter = toEl ? [toEl.x + toEl.width / 2, toEl.y + toEl.height / 2] : [100, 0];
 
-    if (dirX !== 0) {
-      const tLeft = (minX - cx) / dirX;
-      const yLeft = cy + tLeft * dirY;
-      if (tLeft > 0 && yLeft >= minY && yLeft <= maxY) candidates.push({ t: tLeft, point: [minX, yLeft], edge: "left" });
+    const intersectWithRect = (rect: ExcalidrawElement | undefined, target: [number, number]) => {
+      if (!rect) return { point: target, focus: 0.5 };
+      const cx = rect.x + rect.width / 2;
+      const cy = rect.y + rect.height / 2;
+      const dx = target[0] - cx;
+      const dy = target[1] - cy;
+      // Avoid zero-length direction
+      const dirX = dx === 0 && dy === 0 ? 1 : dx;
+      const dirY = dx === 0 && dy === 0 ? 0 : dy;
 
-      const tRight = (maxX - cx) / dirX;
-      const yRight = cy + tRight * dirY;
-      if (tRight > 0 && yRight >= minY && yRight <= maxY)
-        candidates.push({ t: tRight, point: [maxX, yRight], edge: "right" });
-    }
+      const minX = rect.x;
+      const maxX = rect.x + rect.width;
+      const minY = rect.y;
+      const maxY = rect.y + rect.height;
 
-    if (dirY !== 0) {
-      const tTop = (minY - cy) / dirY;
-      const xTop = cx + tTop * dirX;
-      if (tTop > 0 && xTop >= minX && xTop <= maxX) candidates.push({ t: tTop, point: [xTop, minY], edge: "top" });
+      const candidates: { t: number; point: [number, number]; edge: "top" | "right" | "bottom" | "left" }[] = [];
 
-      const tBottom = (maxY - cy) / dirY;
-      const xBottom = cx + tBottom * dirX;
-      if (tBottom > 0 && xBottom >= minX && xBottom <= maxX)
-        candidates.push({ t: tBottom, point: [xBottom, maxY], edge: "bottom" });
-    }
+      if (dirX !== 0) {
+        const tLeft = (minX - cx) / dirX;
+        const yLeft = cy + tLeft * dirY;
+        if (tLeft > 0 && yLeft >= minY && yLeft <= maxY) candidates.push({ t: tLeft, point: [minX, yLeft], edge: "left" });
 
-    const hit = candidates.sort((a, b) => a.t - b.t)[0];
-    if (!hit) return { point: target, focus: 0.5 };
+        const tRight = (maxX - cx) / dirX;
+        const yRight = cy + tRight * dirY;
+        if (tRight > 0 && yRight >= minY && yRight <= maxY)
+          candidates.push({ t: tRight, point: [maxX, yRight], edge: "right" });
+      }
 
-    const [px, py] = hit.point;
-    const focus =
-      hit.edge === "top"
-        ? ((px - minX) / rect.width) * 0.25
-        : hit.edge === "right"
-          ? 0.25 + ((py - minY) / rect.height) * 0.25
-          : hit.edge === "bottom"
-            ? 0.5 + ((maxX - px) / rect.width) * 0.25
-            : 0.75 + ((maxY - py) / rect.height) * 0.25;
+      if (dirY !== 0) {
+        const tTop = (minY - cy) / dirY;
+        const xTop = cx + tTop * dirX;
+        if (tTop > 0 && xTop >= minX && xTop <= maxX) candidates.push({ t: tTop, point: [xTop, minY], edge: "top" });
 
-    return { point: hit.point, focus };
-  };
+        const tBottom = (maxY - cy) / dirY;
+        const xBottom = cx + tBottom * dirX;
+        if (tBottom > 0 && xBottom >= minX && xBottom <= maxX)
+          candidates.push({ t: tBottom, point: [xBottom, maxY], edge: "bottom" });
+      }
 
-  const startInfo = intersectWithRect(fromEl, toCenter as [number, number]);
-  const endInfo = intersectWithRect(toEl, fromCenter as [number, number]);
+      const hit = candidates.sort((a, b) => a.t - b.t)[0];
+      if (!hit) return { point: target, focus: 0.5 };
 
-  const dx = endInfo.point[0] - startInfo.point[0];
-  const dy = endInfo.point[1] - startInfo.point[1];
-  const width = Math.abs(dx);
-  const height = Math.abs(dy);
+      const [px, py] = hit.point;
+      const focus =
+        hit.edge === "top"
+          ? ((px - minX) / rect.width) * 0.25
+          : hit.edge === "right"
+            ? 0.25 + ((py - minY) / rect.height) * 0.25
+            : hit.edge === "bottom"
+              ? 0.5 + ((maxX - px) / rect.width) * 0.25
+              : 0.75 + ((maxY - py) / rect.height) * 0.25;
 
-  const points: [number, number][] = [[0, 0], ...(parsed.data.via || []), [dx, dy]];
+      return { point: hit.point, focus };
+    };
 
-  const el: ExcalidrawElement = {
-    ...createDefaultElement({
-      id: edgeId,
-      type: parsed.data.type === "line" ? "line" : "arrow",
-      width,
-      height,
-      x: startInfo.point[0],
-      y: startInfo.point[1],
-    }),
-    points: points as any,
-  };
+    const startInfo = intersectWithRect(fromEl, toCenter as [number, number]);
+    const endInfo = intersectWithRect(toEl, fromCenter as [number, number]);
+
+    const dx = endInfo.point[0] - startInfo.point[0];
+    const dy = endInfo.point[1] - startInfo.point[1];
+    const width = Math.abs(dx);
+    const height = Math.abs(dy);
+
+    const points: [number, number][] = [[0, 0], ...(parsed.data.via || []), [dx, dy]];
+
+    el = {
+      ...createDefaultElement({
+        id: edgeId,
+        type: parsed.data.type === "line" ? "line" : "arrow",
+        width,
+        height,
+        x: startInfo.point[0],
+        y: startInfo.point[1],
+      }),
+      points: points as any,
+    };
+    (el as any).startBinding = { elementId: parsed.data.from, focus: startInfo.focus, gap: 4, fixedPoint: null };
+    (el as any).endBinding = { elementId: parsed.data.to, focus: endInfo.focus, gap: 4, fixedPoint: null };
+    if (parsed.data.type === "elbow-arrow") (el as any).elbowed = true;
+    if (parsed.data.type === "curved-arrow") (el as any).roundness = { type: 2 };
+    if (parsed.data.startArrow ?? parsed.data.startArrowhead) (el as any).startArrowhead = "arrow";
+    if (parsed.data.endArrow ?? parsed.data.endArrowhead) (el as any).endArrowhead = "arrow";
+    if (parsed.data.label) (el as any).label = parsed.data.label;
+  } else {
+    // Ensure bindings exist even if conversion omitted them
+    const ensureBinding = (
+      binding: any,
+      elementId: string | undefined,
+      fallbackFocus: number,
+      gap = 4
+    ) => {
+      if (!elementId) return binding;
+      if (!binding) return { elementId, focus: fallbackFocus, gap, fixedPoint: null };
+      return binding;
+    };
+
+    const fromCenter = fromEl ? [fromEl.x + fromEl.width / 2, fromEl.y + fromEl.height / 2] : [0, 0];
+    const toCenter = toEl ? [toEl.x + toEl.width / 2, toEl.y + toEl.height / 2] : [0, 0];
+
+    const focusByAxis = (axisDiff: number, primary: number, secondary: number) => {
+      if (!primary && !secondary) return 0.5;
+      if (Math.abs(primary) >= Math.abs(secondary)) {
+        return axisDiff >= 0 ? 0.5 : 0;
+      }
+      return axisDiff >= 0 ? 0.25 : 0.75;
+    };
+
+    (el as any).startBinding = ensureBinding(
+      (el as any).startBinding,
+      parsed.data.from,
+      focusByAxis(toCenter[1] - fromCenter[1], toCenter[0] - fromCenter[0], toCenter[1] - fromCenter[1])
+    );
+    (el as any).endBinding = ensureBinding(
+      (el as any).endBinding,
+      parsed.data.to,
+      focusByAxis(fromCenter[1] - toCenter[1], fromCenter[0] - toCenter[0], fromCenter[1] - toCenter[1])
+    );
+  }
+
   // Make edges visually consistent with native defaults (thicker stroke)
   (el as any).strokeWidth = 2;
-
-  (el as any).startBinding = { elementId: parsed.data.from, focus: startInfo.focus, gap: 4, fixedPoint: null };
-  (el as any).endBinding = { elementId: parsed.data.to, focus: endInfo.focus, gap: 4, fixedPoint: null };
-
-  const startArrow = parsed.data.startArrow ?? parsed.data.startArrowhead;
-  const endArrow = parsed.data.endArrow ?? parsed.data.endArrowhead;
-  if (startArrow !== undefined) (el as any).startArrowhead = startArrow ? "arrow" : null;
-  if (endArrow !== undefined) (el as any).endArrowhead = endArrow ? "arrow" : null;
-  if (parsed.data.type === "elbow-arrow") (el as any).elbowed = true;
-  if (parsed.data.label) (el as any).label = parsed.data.label;
 
   const updatedElements = elements.map((candidate) => {
     if (candidate.id === parsed.data.from || candidate.id === parsed.data.to) {

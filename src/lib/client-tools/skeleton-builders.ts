@@ -83,6 +83,7 @@ export function buildEdgeSkeleton(input: EdgeSkeletonInput) {
   if (input.startArrow !== undefined) skeleton.startArrowhead = input.startArrow ? "arrow" : null;
   if (input.endArrow !== undefined) skeleton.endArrowhead = input.endArrow ? "arrow" : null;
   if (input.type === "elbow-arrow") skeleton.elbowed = true;
+  if (input.type === "curved-arrow") skeleton.roundness = { type: 2 };
   return skeleton;
 }
 
