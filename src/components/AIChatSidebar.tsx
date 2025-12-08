@@ -1,14 +1,52 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatHeader } from "./ai-chat-sidebar/ChatHeader";
 import { ChatInput } from "./ai-chat-sidebar/ChatInput";
 import { LoadingIndicator } from "./ai-chat-sidebar/LoadingIndicator";
 import { MessageBubble } from "./ai-chat-sidebar/MessageBubble";
 import { useChatSidebar, useOverlapFeedback } from "./ai-chat-sidebar/hooks";
+import { ProviderSettingsModal } from "./ai-chat-sidebar/ProviderSettingsModal";
 import { TOOL_NAMES } from "@/lib/client-tools";
 
 export default function AIChatSidebar() {
+  const [showSettings, setShowSettings] = useState(false);
+  const [serverConfig, setServerConfig] = useState<{ has: boolean; baseURL: string | null; model: string | null }>({
+    has: false,
+    baseURL: null,
+    model: null,
+  });
+  const [clientConfig, setClientConfig] = useState<{ apiKey: string; baseURL: string; model: string }>({
+    apiKey: "",
+    baseURL: "",
+    model: "",
+  });
+  const [useServer, setUseServer] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("providerConfig");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setClientConfig({
+          apiKey: parsed.client?.apiKey || "",
+          baseURL: parsed.client?.baseURL || "",
+          model: parsed.client?.model || "",
+        });
+        setUseServer(parsed.useServer !== false);
+      } catch {
+        // ignore
+      }
+    }
+    fetch("/api/chat/config")
+      .then((r) => r.json())
+      .then((data) => {
+        setServerConfig({ has: data.hasServerConfig, baseURL: data.baseURL, model: data.model });
+        if (!data.hasServerConfig) setUseServer(false);
+      })
+      .catch(() => {});
+  }, []);
+
   const {
     messages,
     status,
@@ -176,7 +214,7 @@ export default function AIChatSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
-      <ChatHeader />
+      <ChatHeader onOpenSettings={() => setShowSettings(true)} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
@@ -200,6 +238,22 @@ export default function AIChatSidebar() {
         isLoading={isLoading}
         onSubmit={handleSubmit}
         onStop={stop}
+      />
+
+      <ProviderSettingsModal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        serverConfig={serverConfig}
+        useServer={useServer}
+        clientConfig={clientConfig}
+        onToggleUseServer={setUseServer}
+        onClientChange={setClientConfig}
+        onSaved={() => {
+          localStorage.setItem(
+            "providerConfig",
+            JSON.stringify({ useServer, client: clientConfig })
+          );
+        }}
       />
     </div>
   );

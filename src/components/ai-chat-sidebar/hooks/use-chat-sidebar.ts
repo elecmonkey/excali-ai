@@ -17,7 +17,9 @@ import { readScene } from "@/lib/client-tools/scene-utils";
 import { useDslContextInjection } from "./use-dsl-context-injection";
 import { useRestoreSnapshot } from "./use-restore-snapshot";
 
-export function useChatSidebar() {
+export type ProviderConfig = { useServer?: boolean; client?: { apiKey?: string; baseURL?: string; model?: string } };
+
+export function useChatSidebar(providerConfig?: ProviderConfig) {
   const { updateScene, clearScene, getExcalidrawAPI, scene } = useExcalidrawContext();
   const [inputValue, setInputValue] = useState("");
   const processedOutputs = useRef<Set<string>>(new Set());
