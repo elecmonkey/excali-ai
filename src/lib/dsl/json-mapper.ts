@@ -70,7 +70,18 @@ function toEdgeBlock(el: ExcalidrawElement): EdgeBlock | null {
       ? "line"
       : (el.elbowed ? "elbow-arrow" : "arrow");
 
-  const points = Array.isArray(el.points) ? (el.points as [number, number][]) : [];
+  const sanitizePoint = (pt: any): [number, number] => {
+    if (Array.isArray(pt) && pt.length === 2) {
+      const [x, y] = pt;
+      const sx = Number.isFinite(x) ? x : 0;
+      const sy = Number.isFinite(y) ? y : 0;
+      return [sx, sy];
+    }
+    return [0, 0];
+  };
+
+  const rawPoints = Array.isArray(el.points) ? (el.points as [number, number][]) : [];
+  const points = rawPoints.map(sanitizePoint);
   const via = points.length > 2 ? points.slice(1, -1) : undefined;
 
   const startBinding = (el as any).startBinding;
@@ -82,8 +93,8 @@ function toEdgeBlock(el: ExcalidrawElement): EdgeBlock | null {
     edgeKind,
     from: startBinding?.elementId ?? null,
     to: endBinding?.elementId ?? null,
-    start: points[0],
-    end: points[points.length - 1],
+    start: sanitizePoint(points[0]),
+    end: sanitizePoint(points[points.length - 1]),
     via,
     startArrow: (el as any).startArrowhead ?? undefined,
     endArrow: (el as any).endArrowhead ?? undefined,

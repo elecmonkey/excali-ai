@@ -22,6 +22,11 @@ export type EdgeSkeletonInput = {
   label?: string;
   startArrow?: boolean;
   endArrow?: boolean;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  points?: [number, number][];
 };
 
 export function buildNodeSkeleton(input: NodeSkeletonInput) {
@@ -74,8 +79,15 @@ export function buildEdgeSkeleton(input: EdgeSkeletonInput) {
     start: { id: input.from },
     end: { id: input.to },
   };
+  if (input.x !== undefined) skeleton.x = input.x;
+  if (input.y !== undefined) skeleton.y = input.y;
+  if (input.width !== undefined) skeleton.width = input.width;
+  if (input.height !== undefined) skeleton.height = input.height;
   if (input.via && input.via.length) {
     skeleton.points = input.via;
+  }
+  if (input.points && input.points.length) {
+    skeleton.points = input.points;
   }
   if (input.label) {
     skeleton.label = { text: input.label };
