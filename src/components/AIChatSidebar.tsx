@@ -16,28 +16,36 @@ export default function AIChatSidebar() {
     baseURL: null,
     model: null,
   });
-  const [clientConfig, setClientConfig] = useState<{ apiKey: string; baseURL: string; model: string }>({
-    apiKey: "",
-    baseURL: "",
-    model: "",
-  });
-  const [useServer, setUseServer] = useState(true);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("providerConfig");
+  const [clientConfig, setClientConfig] = useState<{ apiKey: string; baseURL: string; model: string }>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("providerConfig") : null;
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setClientConfig({
+        return {
           apiKey: parsed.client?.apiKey || "",
           baseURL: parsed.client?.baseURL || "",
           model: parsed.client?.model || "",
-        });
-        setUseServer(parsed.useServer !== false);
+        };
       } catch {
-        // ignore
+        return { apiKey: "", baseURL: "", model: "" };
       }
     }
+    return { apiKey: "", baseURL: "", model: "" };
+  });
+  const [useServer, setUseServer] = useState<boolean>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("providerConfig") : null;
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return parsed.useServer !== false;
+      } catch {
+        return true;
+      }
+    }
+    return true;
+  });
+
+  useEffect(() => {
     fetch("/api/chat/config")
       .then((r) => r.json())
       .then((data) => {
@@ -214,7 +222,14 @@ export default function AIChatSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
-      <ChatHeader onOpenSettings={() => setShowSettings(true)} />
+      <ChatHeader
+        onOpenSettings={() => setShowSettings(true)}
+        hasProvider={
+          useServer
+            ? serverConfig.has
+            : !!(clientConfig.apiKey && clientConfig.baseURL && clientConfig.model)
+        }
+      />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
