@@ -17,11 +17,22 @@ export default function ResizableSplitPane({
   minLeftWidth = 30,
   minRightWidth = 15,
 }: ResizableSplitPaneProps) {
-  const [leftWidth, setLeftWidth] = useState(defaultLeftWidth);
+  const loadSaved = () => {
+    if (typeof window === "undefined") return null;
+    const saved = localStorage.getItem("split-position");
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved) as { horizontal?: number; vertical?: number };
+    } catch {
+      return null;
+    }
+  };
+  const saved = loadSaved();
+  const [leftWidth, setLeftWidth] = useState(saved?.horizontal ?? defaultLeftWidth);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVertical, setIsVertical] = useState(false);
-  const [verticalDefault, setVerticalDefault] = useState(60); // percent for top pane on mobile
+  const [verticalDefault] = useState(saved?.vertical ?? 60); // percent for top pane on mobile
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
@@ -45,6 +56,10 @@ export default function ResizableSplitPane({
         const newTopHeight = ((clientY - containerRect.top) / containerRect.height) * 100;
         if (newTopHeight >= 5 && newTopHeight <= 95) {
           setLeftWidth(newTopHeight);
+          localStorage.setItem(
+            "split-position",
+            JSON.stringify({ horizontal: leftWidth, vertical: newTopHeight })
+          );
         }
         return;
       }
@@ -54,6 +69,10 @@ export default function ResizableSplitPane({
       // Enforce min/max constraints
       if (newLeftWidth >= minLeftWidth && newLeftWidth <= 100 - minRightWidth) {
         setLeftWidth(newLeftWidth);
+        localStorage.setItem(
+          "split-position",
+          JSON.stringify({ horizontal: newLeftWidth, vertical: leftWidth })
+        );
       }
     };
 

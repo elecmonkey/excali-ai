@@ -42,6 +42,9 @@ export interface ExcalidrawAPI {
 
 const ExcalidrawContext = createContext<ExcalidrawContextType | null>(null);
 
+const THEME_STORAGE_KEY = "theme";
+const SPLIT_STORAGE_KEY = "split-position";
+
 export function ExcalidrawProvider({ children }: { children: React.ReactNode }) {
   const [scene, setScene] = useState<ExcalidrawScene>({
     elements: [],
@@ -49,7 +52,7 @@ export function ExcalidrawProvider({ children }: { children: React.ReactNode }) 
   });
   const [theme, setThemeState] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "light";
-    const stored = localStorage.getItem("theme");
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === "dark" || stored === "light") return stored;
     const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
     return prefersDark ? "dark" : "light";
@@ -60,7 +63,7 @@ export function ExcalidrawProvider({ children }: { children: React.ReactNode }) 
       document.documentElement.setAttribute("data-theme", theme);
     }
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem("theme", theme);
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
     }
   }, [theme]);
   useEffect(() => {
