@@ -50,7 +50,9 @@ export function ExcalidrawProvider({ children }: { children: React.ReactNode }) 
   const [theme, setThemeState] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "light";
     const stored = localStorage.getItem("theme");
-    return stored === "dark" ? "dark" : "light";
+    if (stored === "dark" || stored === "light") return stored;
+    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    return prefersDark ? "dark" : "light";
   });
 
   useEffect(() => {
@@ -61,6 +63,15 @@ export function ExcalidrawProvider({ children }: { children: React.ReactNode }) 
       localStorage.setItem("theme", theme);
     }
   }, [theme]);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => {
+      setThemeState(e.matches ? "dark" : "light");
+    };
+    media.addEventListener("change", handler);
+    return () => media.removeEventListener("change", handler);
+  }, []);
   const setTheme = useCallback((t: "light" | "dark") => setThemeState(t), []);
   
   const excalidrawAPIRef = useRef<ExcalidrawAPI | null>(null);
