@@ -18,7 +18,9 @@ cd excali-ai
 pnpm install
 ```
 
-2. Create a local environment file and configure your OpenAI-compatible API provider
+2. (Optional) Configure an OpenAI-compatible provider on the server  
+   - Server config is shared by everyone.  
+   - You can skip this and let users fill Base URL / Key / Model in the client UI (only for themselves).
 
 ```bash
 cp .env.local.example .env.local

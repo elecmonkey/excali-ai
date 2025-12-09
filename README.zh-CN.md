@@ -18,7 +18,9 @@ cd excali-ai
 pnpm install
 ```
 
-2. 创建本地环境文件并配置你的 OpenAI 兼容 API
+2.（可选）在服务端配置 OpenAI 兼容的 API  
+   - 服务端配置对所有用户生效。  
+   - 你也可以跳过这一步，让用户在前端填写 Base URL、Key、Model（仅对该用户生效）。
 
 ```bash
 cp .env.local.example .env.local
