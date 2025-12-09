@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AddToolOutputFn, ToolCallInfo, SceneToolResult, ExcalidrawElement } from "./types";
+import type { AddToolOutputFn, ToolCallInfo, ExcalidrawElement } from "./types";
 import type { CanvasOps } from "./scene-utils";
 import { readScene } from "./scene-utils";
 import { detectOverlaps } from "../geometry/overlap";

@@ -112,7 +112,6 @@ export async function execute(
   const converted = await convertSkeletons([skeleton], { regenerateIds: false });
 
   if (converted && converted.length) {
-    const convertedIds = new Set(converted.map((el) => el.id));
     const isBoundToTarget = (el: ExcalidrawElement) =>
       el.type === "text" && (el as any).containerId === target.id;
     const retained = elements.filter((el) => el.id !== target.id && !isBoundToTarget(el));

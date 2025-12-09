@@ -303,7 +303,7 @@ export async function execute(toolCall: ToolCallInfo, addToolOutput: AddToolOutp
       const cx = (rect.x as number) + (rect.width as number) / 2;
       const cy = (rect.y as number) + (rect.height as number) / 2;
       let dx = target[0] - cx;
-      let dy = target[1] - cy;
+      const dy = target[1] - cy;
       if (dx === 0 && dy === 0) dx = 1; // avoid zero vector
 
       const angle = (rect as any).angle as number | undefined;

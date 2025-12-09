@@ -60,7 +60,7 @@ export async function execute(
     const cx = rect.x + rect.width / 2;
     const cy = rect.y + rect.height / 2;
     let dx = target[0] - cx;
-    let dy = target[1] - cy;
+    const dy = target[1] - cy;
     if (dx === 0 && dy === 0) dx = 1;
 
     const angle = (rect as any).angle as number | undefined;

@@ -15,11 +15,7 @@ import {
 import { AddToolOutputFn } from "@/lib/client-tools/types";
 import { readScene } from "@/lib/client-tools/scene-utils";
 import { useDslContextInjection } from "./use-dsl-context-injection";
-import { useRestoreSnapshot } from "./use-restore-snapshot";
-
-export type ProviderConfig = { useServer?: boolean; client?: { apiKey?: string; baseURL?: string; model?: string } };
-
-export function useChatSidebar(providerConfig?: ProviderConfig) {
+export function useChatSidebar() {
   const { updateScene, clearScene, getExcalidrawAPI, scene } = useExcalidrawContext();
   const [inputValue, setInputValue] = useState("");
   const processedOutputs = useRef<Set<string>>(new Set());

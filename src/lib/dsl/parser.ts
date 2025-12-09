@@ -154,13 +154,11 @@ function parseLayout(mode: string, body?: string): LayoutBlock {
 function collectBlocks(text: string): Array<{ header: string; id: string; body: string | null }> {
   const blocks: Array<{ header: string; id: string; body: string | null }> = [];
   const regex = /(node|edge|file|appState|update node|update edge|delete node|delete edge|layout)\s+([^\s{]+)?\s*\{/g;
-  let lastIndex = 0;
 
   while (true) {
     const match = regex.exec(text);
     if (!match) break;
 
-    const startIndex = match.index;
     const braceIndex = text.indexOf("{", regex.lastIndex - 1);
     if (braceIndex === -1) break;
 
@@ -181,7 +179,6 @@ function collectBlocks(text: string): Array<{ header: string; id: string; body: 
     const id = (match[2] || "").trim();
     const body = text.slice(braceIndex + 1, endIndex).trim();
     blocks.push({ header, id, body });
-    lastIndex = endIndex + 1;
   }
 
   // Handle layout without braces: "layout auto"

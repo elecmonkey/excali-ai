@@ -7,8 +7,7 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-      "prefer-const": "warn",
+      "@typescript-eslint/no-explicit-any": "warn"
     },
   },
   // Override default ignores of eslint-config-next.

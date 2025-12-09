@@ -8,10 +8,8 @@ import { MessageBubble } from "./ai-chat-sidebar/MessageBubble";
 import { useChatSidebar, useOverlapFeedback } from "./ai-chat-sidebar/hooks";
 import { ProviderSettingsModal } from "./ai-chat-sidebar/ProviderSettingsModal";
 import { TOOL_NAMES } from "@/lib/client-tools";
-import { useExcalidrawContext } from "@/lib/excalidraw-context";
 
 export default function AIChatSidebar() {
-  const { theme } = useExcalidrawContext();
   const [showSettings, setShowSettings] = useState(false);
   const [serverConfig, setServerConfig] = useState<{ has: boolean; baseURL: string | null; model: string | null }>({
     has: false,
