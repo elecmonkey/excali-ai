@@ -34,7 +34,7 @@ export function ChatHeader({ onOpenSettings, hasProvider }: ChatHeaderProps) {
           onMouseLeave={() => setShowTip(false)}
         />
         <h2 className="text-lg font-semibold text-primary">
-          Chat with AI Assistant
+          Chat with AI
         </h2>
         {!resolvedStatus && showTip && (
           <div className="absolute top-10 left-0 bg-surface border border-muted shadow-lg rounded-md px-3 py-2 text-xs text-primary">
