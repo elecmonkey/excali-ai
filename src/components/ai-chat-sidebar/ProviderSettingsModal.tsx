@@ -60,22 +60,22 @@ export function ProviderSettingsModal({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
-      <div className="w-[480px] max-w-[90vw] rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 shadow-xl p-4 space-y-3">
+      <div className="w-[480px] max-w-[90vw] rounded-lg bg-surface border border-muted shadow-xl p-4 space-y-3 text-primary">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Provider Settings</h3>
+          <h3 className="text-lg font-semibold text-primary">Provider Settings</h3>
           <button
             onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="text-secondary hover:text-primary"
             aria-label="Close"
           >
             ✕
           </button>
         </div>
 
-        <div className="text-sm space-y-1 text-zinc-700 dark:text-zinc-200">
+        <div className="text-sm space-y-1 text-secondary">
           <div>Server config: {serverConfig.has ? "Available" : "Not set"}</div>
           {serverConfig.has && (
-            <div className="text-xs text-zinc-500">URL: {serverConfig.baseURL || "-"} | Model: {serverConfig.model || "-"}</div>
+            <div className="text-xs text-secondary">URL: {serverConfig.baseURL || "-"} | Model: {serverConfig.model || "-"}</div>
           )}
         </div>
 
@@ -100,14 +100,14 @@ export function ProviderSettingsModal({
         </div>
 
         <div className="space-y-2 text-sm">
-          <div className="flex gap-2 text-xs text-zinc-500">
+          <div className="flex gap-2 text-xs text-secondary">
             Quick fill:
             <button className="underline" onClick={() => applyTemplate("openai")}>OpenAI</button>
             <button className="underline" onClick={() => applyTemplate("deepseek")}>DeepSeek</button>
             <button className="underline" onClick={() => applyTemplate("bigmodel")}>BigModel</button>
           </div>
           <input
-            className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+            className="w-full px-3 py-2 rounded border border-muted bg-surface text-sm text-primary placeholder:text-secondary"
             placeholder="Base URL"
             value={clientConfig.baseURL}
             onChange={(e) => onClientChange({ ...clientConfig, baseURL: e.target.value })}
@@ -116,7 +116,7 @@ export function ProviderSettingsModal({
             style={useServer && serverConfig.has ? { opacity: 0.6 } : undefined}
           />
           <input
-            className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+            className="w-full px-3 py-2 rounded border border-muted bg-surface text-sm text-primary placeholder:text-secondary"
             placeholder="Model"
             value={clientConfig.model}
             onChange={(e) => onClientChange({ ...clientConfig, model: e.target.value })}
@@ -125,7 +125,7 @@ export function ProviderSettingsModal({
             style={useServer && serverConfig.has ? { opacity: 0.6 } : undefined}
           />
           <input
-            className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+            className="w-full px-3 py-2 rounded border border-muted bg-surface text-sm text-primary placeholder:text-secondary"
             placeholder="API Key"
             type="password"
             value={clientConfig.apiKey}
@@ -140,11 +140,11 @@ export function ProviderSettingsModal({
           <button
             onClick={handleTest}
             disabled={testing}
-            className="px-3 py-2 rounded bg-blue-500 text-white text-sm hover:bg-blue-600 disabled:opacity-50"
+            className="px-3 py-2 rounded bg-blue-500 text-white text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Test connectivity
           </button>
-          {testResult && <div className="text-xs text-zinc-700 dark:text-zinc-200">{testResult}</div>}
+          {testResult && <div className="text-xs text-secondary">{testResult}</div>}
         </div>
 
         <div className="flex justify-end gap-2 text-sm">
@@ -158,7 +158,7 @@ export function ProviderSettingsModal({
               onSaved?.();
               onClose();
             }}
-            className="px-4 py-2 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+            className="px-4 py-2 rounded bg-muted text-primary hover:bg-divider transition-colors"
           >
             Save
           </button>

@@ -1,8 +1,82 @@
 @import "tailwindcss";
 
-body {
-  padding: 0;
-  margin: 0;
-  box-sizing: border-box;
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  --bg-surface: 255 255 255;
+  --bg-muted: 245 245 247;
+  --text-primary: 17 24 39;
+  --text-secondary: 87 96 110;
+  --border-muted: 228 228 231;
+  --divider: 226 232 240;
+  --warn-bg: 255 251 235;
+  --warn-border: 253 230 138;
+  --warn-text: 120 53 15;
+  --warn-muted: 146 64 14;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg-surface: 24 24 27;
+  --bg-muted: 39 39 42;
+  --text-primary: 229 231 235;
+  --text-secondary: 161 172 184;
+  --border-muted: 63 63 70;
+  --divider: 75 85 99;
+  --warn-bg: 69 26 3;
+  --warn-border: 180 83 9;
+  --warn-text: 253 230 138;
+  --warn-muted: 251 191 36;
+  color-scheme: dark;
+}
+
+@layer base {
+  .bg-surface {
+    background-color: rgb(var(--bg-surface));
+  }
+  .bg-muted {
+    background-color: rgb(var(--bg-muted));
+  }
+  .text-primary {
+    color: rgb(var(--text-primary));
+  }
+  .text-secondary {
+    color: rgb(var(--text-secondary));
+  }
+  .border-muted {
+    border-color: rgb(var(--border-muted));
+  }
+  .bg-divider {
+    background-color: rgb(var(--divider));
+  }
+  .bg-warn {
+    background-color: rgb(var(--warn-bg));
+  }
+  .border-warn {
+    border-color: rgb(var(--warn-border));
+  }
+  .text-warn {
+    color: rgb(var(--warn-text));
+  }
+  .text-warn-muted {
+    color: rgb(var(--warn-muted));
+  }
+
+  body {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+    background: rgb(var(--bg-surface));
+    color: rgb(var(--text-primary));
+  }
+}
+
+/* Utility helpers for theme-driven colors (hover variants for custom tokens) */
+
+@layer utilities {
+  .hover\:text-primary:hover {
+    color: rgb(var(--text-primary));
+  }
+  .hover\:bg-divider:hover {
+    background-color: rgb(var(--divider));
+  }
 }

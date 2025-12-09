@@ -44,7 +44,7 @@ export function DslBadge({ dsl }: DslBadgeProps) {
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
         ref={btnRef}
-        className="h-4 w-4 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[9px] flex items-center justify-center border border-zinc-200 dark:border-zinc-700 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 dark:hover:text-blue-200"
+        className="h-4 w-4 rounded-full bg-muted text-secondary text-[9px] flex items-center justify-center border border-muted hover:bg-blue-100 hover:text-blue-700"
       >
         D
       </button>
@@ -53,7 +53,7 @@ export function DslBadge({ dsl }: DslBadgeProps) {
           <div
             onMouseEnter={onEnter}
             onMouseLeave={onLeave}
-            className={`fixed bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg max-h-64 w-72 overflow-auto p-3 text-xs whitespace-pre-wrap z-9999 transition-opacity duration-200 ${
+            className={`fixed bg-surface text-primary border border-muted rounded-lg shadow-lg max-h-64 w-72 overflow-auto p-3 text-xs whitespace-pre-wrap z-[9999] transition-opacity duration-200 ${
               visible ? "opacity-100" : "opacity-0 pointer-events-none"
             }`}
             style={{

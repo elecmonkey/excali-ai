@@ -63,8 +63,8 @@ export default function ResizableSplitPane({
       {/* Resizer */}
       <div
         onMouseDown={() => setIsDragging(true)}
-        className={`w-1 bg-zinc-200 dark:bg-zinc-800 hover:bg-blue-400 dark:hover:bg-blue-600 cursor-col-resize transition-colors ${
-          isDragging ? "bg-blue-500 dark:bg-blue-500" : ""
+        className={`w-1 bg-divider hover:bg-blue-400 cursor-col-resize transition-colors ${
+          isDragging ? "bg-blue-500" : ""
         }`}
       />
 

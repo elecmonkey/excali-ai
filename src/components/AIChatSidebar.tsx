@@ -8,8 +8,10 @@ import { MessageBubble } from "./ai-chat-sidebar/MessageBubble";
 import { useChatSidebar, useOverlapFeedback } from "./ai-chat-sidebar/hooks";
 import { ProviderSettingsModal } from "./ai-chat-sidebar/ProviderSettingsModal";
 import { TOOL_NAMES } from "@/lib/client-tools";
+import { useExcalidrawContext } from "@/lib/excalidraw-context";
 
 export default function AIChatSidebar() {
+  const { theme } = useExcalidrawContext();
   const [showSettings, setShowSettings] = useState(false);
   const [serverConfig, setServerConfig] = useState<{ has: boolean; baseURL: string | null; model: string | null }>({
     has: false,
@@ -152,12 +154,12 @@ export default function AIChatSidebar() {
           return (
             <div
               key={idx}
-              className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 my-2"
+              className="bg-warn border border-warn text-warn rounded-lg p-3 my-2"
             >
-              <div className="text-sm text-amber-900 dark:text-amber-100 font-medium mb-2">
+              <div className="text-sm font-medium mb-2 text-warn">
                 ⚠️ Confirm Replace?
               </div>
-              <div className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+              <div className="text-xs text-warn-muted mb-3">
                 This will clear all content on canvas and replace with new diagram
               </div>
               <div className="flex gap-2">
@@ -169,7 +171,7 @@ export default function AIChatSidebar() {
                 </button>
                 <button
                   onClick={() => handleRejectReplace(callId)}
-                  className="px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+                  className="px-3 py-1.5 text-xs font-medium bg-muted text-primary rounded hover:bg-divider transition-colors"
                 >
                   Cancel
                 </button>
@@ -221,7 +223,7 @@ export default function AIChatSidebar() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
+    <div className="flex flex-col h-full min-h-full bg-surface text-primary">
       <ChatHeader
         onOpenSettings={() => setShowSettings(true)}
         hasProvider={
