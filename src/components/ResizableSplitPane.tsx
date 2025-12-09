@@ -21,29 +21,35 @@ export default function ResizableSplitPane({
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVertical, setIsVertical] = useState(false);
+  const [verticalDefault, setVerticalDefault] = useState(60); // percent for top pane on mobile
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
-    const updateLayout = () => setIsVertical(mq.matches);
+    const updateLayout = () => {
+      setIsVertical(mq.matches);
+      if (mq.matches) {
+        setLeftWidth(verticalDefault);
+      }
+    };
     updateLayout();
     mq.addEventListener("change", updateLayout);
     return () => mq.removeEventListener("change", updateLayout);
-  }, []);
+  }, [verticalDefault]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (clientX: number, clientY: number) => {
       if (!isDragging || !containerRef.current) return;
 
       const containerRect = containerRef.current.getBoundingClientRect();
       if (isVertical) {
-        const newTopHeight = ((e.clientY - containerRect.top) / containerRect.height) * 100;
+        const newTopHeight = ((clientY - containerRect.top) / containerRect.height) * 100;
         if (newTopHeight >= 5 && newTopHeight <= 95) {
           setLeftWidth(newTopHeight);
         }
         return;
       }
 
-      const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+      const newLeftWidth = ((clientX - containerRect.left) / containerRect.width) * 100;
 
       // Enforce min/max constraints
       if (newLeftWidth >= minLeftWidth && newLeftWidth <= 100 - minRightWidth) {
@@ -51,22 +57,34 @@ export default function ResizableSplitPane({
       }
     };
 
-    const handleMouseUp = () => {
-      setIsDragging(false);
+    const onMouseMove = (e: MouseEvent) => handlePointerMove(e.clientX, e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) {
+        e.preventDefault();
+        handlePointerMove(t.clientX, t.clientY);
+      }
     };
+    const onPointerUp = () => setIsDragging(false);
 
     if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("mousemove", onMouseMove, { passive: true });
+      document.addEventListener("mouseup", onPointerUp);
+      document.addEventListener("touchmove", onTouchMove, { passive: false });
+      document.addEventListener("touchend", onPointerUp);
       document.body.style.cursor = isVertical ? "row-resize" : "col-resize";
       document.body.style.userSelect = "none";
+      document.body.style.touchAction = "none";
     }
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onPointerUp);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onPointerUp);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      document.body.style.touchAction = "";
     };
   }, [isDragging, isVertical, minLeftWidth, minRightWidth]);
 
@@ -90,10 +108,22 @@ export default function ResizableSplitPane({
       {/* Resizer */}
       <div
         onMouseDown={() => setIsDragging(true)}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
         className={`${
-          isVertical ? "h-1 w-full cursor-row-resize" : "w-1 h-full cursor-col-resize"
-        } bg-divider hover:bg-blue-400 transition-colors ${isDragging ? "bg-blue-500" : ""}`}
-      />
+          isVertical
+            ? "h-3 w-full cursor-row-resize"
+            : "w-3 h-full cursor-col-resize"
+        } flex items-center justify-center transition-colors touch-none`}
+      >
+        <div
+          className={`${
+            isVertical ? "h-1 w-full" : "w-1 h-full"
+          } bg-divider hover:bg-blue-400 transition-colors ${isDragging ? "bg-blue-500" : ""}`}
+        />
+      </div>
 
       {/* Right/Bottom Pane */}
       <div
