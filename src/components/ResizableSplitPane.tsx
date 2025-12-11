@@ -133,8 +133,8 @@ export default function ResizableSplitPane({
         }}
         className={`${
           isVertical
-            ? "h-3 w-full cursor-row-resize"
-            : "w-3 h-full cursor-col-resize"
+            ? "w-full cursor-row-resize"
+            : "h-full cursor-col-resize"
         } flex items-center justify-center transition-colors touch-none`}
       >
         <div
