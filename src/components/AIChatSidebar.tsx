@@ -64,6 +64,7 @@ export default function AIChatSidebar() {
     conversations,
     current,
     currentSummary,
+    createConversation,
     selectConversation,
     renameConversation,
     deleteConversation,
@@ -107,6 +108,10 @@ export default function AIChatSidebar() {
           }
           onOpenConversations={() => setShowConversations((v) => !v)}
           conversationsButtonRef={conversationButtonRef}
+          onNewConversation={() => {
+            void createConversation();
+            setShowConversations(false);
+          }}
         />
       </div>
 
