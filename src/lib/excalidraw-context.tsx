@@ -43,8 +43,6 @@ export interface ExcalidrawAPI {
 const ExcalidrawContext = createContext<ExcalidrawContextType | null>(null);
 
 const THEME_STORAGE_KEY = "theme";
-const SPLIT_STORAGE_KEY = "split-position";
-
 export function ExcalidrawProvider({ children }: { children: React.ReactNode }) {
   const [scene, setScene] = useState<ExcalidrawScene>({
     elements: [],

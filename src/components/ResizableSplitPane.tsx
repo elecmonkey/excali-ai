@@ -105,7 +105,7 @@ export default function ResizableSplitPane({
       document.body.style.userSelect = "";
       document.body.style.touchAction = "";
     };
-  }, [isDragging, isVertical, minLeftWidth, minRightWidth]);
+  }, [isDragging, isVertical, minLeftWidth, minRightWidth, leftWidth]);
 
   return (
     <div

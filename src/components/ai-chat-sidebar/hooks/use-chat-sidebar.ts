@@ -15,12 +15,40 @@ import {
 import { AddToolOutputFn } from "@/lib/client-tools/types";
 import { readScene } from "@/lib/client-tools/scene-utils";
 import { useDslContextInjection } from "./use-dsl-context-injection";
-export function useChatSidebar() {
+import { SceneSnapshot } from "@/lib/storage/conversations";
+
+type PersistPayload = {
+  messages: any[];
+  draft: string;
+  snapshots: Record<string, SceneSnapshot>;
+};
+
+export function useChatSidebar({
+  conversationId,
+  initialMessages,
+  initialDraft,
+  initialSnapshots,
+  onPersist,
+}: {
+  conversationId: string;
+  initialMessages: any[];
+  initialDraft: string;
+  initialSnapshots: Record<string, SceneSnapshot>;
+  onPersist: (payload: PersistPayload) => void;
+}) {
   const { updateScene, clearScene, getExcalidrawAPI, scene } = useExcalidrawContext();
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(initialDraft || "");
   const processedOutputs = useRef<Set<string>>(new Set());
-  const messageSnapshots = useRef<Map<string, { elements: any[]; files: any }>>(new Map());
+  const messageSnapshots = useRef<Map<string, { elements: any[]; files: any }>>(
+    new Map(
+      Object.entries(initialSnapshots || {}).map(([id, snap]) => [
+        id,
+        { elements: snap.elements, files: snap.files },
+      ])
+    )
+  );
   const sendMessageRef = useRef<(args: { text: string }) => Promise<void> | undefined>(undefined);
+  const hydratedRef = useRef<boolean>(false);
 
   const canvasOps = useCallback(
     () => ({
@@ -32,6 +60,8 @@ export function useChatSidebar() {
   );
 
   const { messages, sendMessage, addToolOutput, status, stop } = useChat({
+    id: conversationId,
+    messages: initialMessages,
     transport: new DefaultChatTransport({ api: "/api/chat" }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     async onToolCall({ toolCall }) {
@@ -118,6 +148,19 @@ export function useChatSidebar() {
       messageSnapshots.current.set(msg.id, { elements: elements as any[], files });
     });
   }, [messages, canvasOps]);
+
+  // Persist conversation changes (messages, draft, snapshots)
+  useEffect(() => {
+    const snapshotsObj: Record<string, SceneSnapshot> = {};
+    messageSnapshots.current.forEach((snap, id) => {
+      snapshotsObj[id] = snap;
+    });
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      return;
+    }
+    onPersist({ messages, draft: inputValue, snapshots: snapshotsObj });
+  }, [messages, inputValue, onPersist, conversationId]);
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {

@@ -4,15 +4,18 @@ import { GitHubIcon } from "../GitHubIcon";
 import { SettingsIcon } from "./SettingsIcon";
 import { LightIcon } from "./LightIcon";
 import { DarkIcon } from "./DarkIcon";
-import { useEffect, useState } from "react";
+import { ConversationsIcon } from "./ConversationsIcon";
+import { useEffect, useState, type RefObject } from "react";
 import { useExcalidrawContext } from "@/lib/excalidraw-context";
 
 interface ChatHeaderProps {
   onOpenSettings: () => void;
   hasProvider: boolean;
+  onOpenConversations: () => void;
+  conversationsButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
-export function ChatHeader({ onOpenSettings, hasProvider }: ChatHeaderProps) {
+export function ChatHeader({ onOpenSettings, hasProvider, onOpenConversations, conversationsButtonRef }: ChatHeaderProps) {
   const [showTip, setShowTip] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useExcalidrawContext();
@@ -50,6 +53,15 @@ export function ChatHeader({ onOpenSettings, hasProvider }: ChatHeaderProps) {
           aria-label="Toggle theme"
         >
           {theme === "light" ? <LightIcon className="w-6 h-6" /> : <DarkIcon className="w-6 h-6" />}
+        </button>
+        <button
+          type="button"
+          onClick={onOpenConversations}
+          aria-label="Conversations"
+          className="text-secondary hover:text-primary transition-colors"
+          ref={conversationsButtonRef}
+        >
+          <ConversationsIcon className="w-6 h-6" />
         </button>
         <button
           type="button"
